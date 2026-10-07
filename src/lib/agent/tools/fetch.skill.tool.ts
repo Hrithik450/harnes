@@ -21,11 +21,8 @@ export const fetchSkillTool = tool({
         "A brief explanation of what you are reading in this step.",
       ),
   }),
-  execute: async (args: {
-    skill_name: string;
-    title: string;
-    subtitle: string;
-  }) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  execute: async (args: any) => {
     const { skill_name } = args;
     console.log(`\n🤖 [AI Tool Called] -> fetch_skill: Reading guidelines for '${skill_name}'`);
     
@@ -42,4 +39,5 @@ export const fetchSkillTool = tool({
       return `Error reading skill ${skill_name}: ${e instanceof Error ? e.message : String(e)}`;
     }
   },
-});
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+} as any);

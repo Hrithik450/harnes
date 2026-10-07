@@ -21,7 +21,7 @@ export function getSystemPrompt() {
   prompt += `You have access to the following tools to accomplish your tasks.\n`;
   prompt += `CRITICAL RULE: You MUST NOT generate marketing content, strategies, scripts, or briefs from your own memory. You MUST call \`fetch_skill\` FIRST for EVERY task to read the mandatory guidelines. If you do not call \`fetch_skill\`, the user's campaign will fail.\n\n`;
 
-  prompt += `- **fetch_skill**: Call this tool by passing the `skill_name` parameter (e.g., "creative_brief_generator") to retrieve its detailed instructions and operating procedures. You MUST call this BEFORE executing any marketing strategy, campaign, or research tasks.\n`;
+  prompt += `- **fetch_skill**: Call this tool by passing the 'skill_name' parameter (e.g., "creative_brief_generator") to retrieve its detailed instructions and operating procedures. You MUST call this BEFORE executing any marketing strategy, campaign, or research tasks.\n`;
   prompt += `- **search_web**: Call this tool to perform live web searches using the Tavily API. ALWAYS use this heavily during competitor research or when you need up-to-date market data, real-time facts, or external context.\n`;
   prompt += `- **scrape_landing_page**: Call this tool whenever the user provides a website URL. Use it to extract their core offering, pricing, and messaging to personalize the output.\n`;
   prompt += `- **get_search_volume**: Call this tool during keyword research, SEO, or PPC strategy planning to get real Search Volume, CPC, and Keyword Difficulty data instead of guessing.\n`;
