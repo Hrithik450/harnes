@@ -1,0 +1,31 @@
+@font-face {
+  font-family: 'CursorGothic';
+  src: url('/fonts/CursorGothic_Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'xVf';
+  src: url('/fonts/XVF_Variable.woff2') format('woff2');
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'GeistMono';
+  src: url('/fonts/GeistMono_Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'CursorIcons16';
+  src: url('/fonts/cursor-icons-16.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
