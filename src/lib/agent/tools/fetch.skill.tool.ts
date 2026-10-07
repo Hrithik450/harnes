@@ -27,14 +27,18 @@ export const fetchSkillTool = tool({
     subtitle?: string;
   }) => {
     const { skill_name } = args;
+    console.log(`\n🤖 [AI Tool Called] -> fetch_skill: Reading guidelines for '${skill_name}'`);
+    
     const skill = SKILL_REGISTRY.find((s) => s.name === skill_name);
     if (!skill) {
+      console.warn(`⚠️ [AI Tool Error] -> Skill '${skill_name}' not found.`);
       return `Skill ${skill_name} not found. Available skills: ${SKILL_REGISTRY.map((s) => s.name).join(", ")}`;
     }
     try {
       const content = fs.readFileSync(skill.filePath, "utf-8");
       return content;
     } catch (e: unknown) {
+      console.error(`❌ [AI Tool Error] -> Failed to read '${skill_name}':`, e);
       return `Error reading skill ${skill_name}: ${e instanceof Error ? e.message : String(e)}`;
     }
   },
