@@ -97,11 +97,10 @@ Use every detail the user gives (cities, price range, differentiators, offer).
 
 ## 5. Intake and follow-up questions
 
-**Rule: bias toward writing the scripts.**
+**Rule: Do NOT assume missing core inputs.**
 
-- Description names the offer and audience → **write immediately**; state assumptions in one line.
-- Description is vague → ask **one round**, max 3 short questions with defaults (use the ask_user_input tool for tappable options if available).
-- Never more than one round. If unanswered, proceed with defaults.
+- If the user provides a vague description or missing core details, you MUST ask short, clarifying questions to gather this information BEFORE generating the scripts. Wait for their reply.
+- Do NOT proceed with defaults if critical context is missing.
 
 **Question bank (highest value first)**
 1. Language: English, Hinglish or Hindi?

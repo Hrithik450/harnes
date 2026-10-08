@@ -70,7 +70,7 @@ Choose your industry and campaign objective such as lead generation, sales, or w
 
 Once your inputs are submitted, GrowEasy generates an estimated cost per lead calculation along with performance benchmarks and expected campaign outcomes.
 
-_(Note for AI: Bias toward producing the estimate. If inputs are missing, ask one round of short questions (price, city/region, channel, budget). If no answer, use sensible defaults (Meta, Tier 1, etc.) and explicitly state your assumptions.)_
+_(Note for AI: Do NOT assume missing inputs like price, city/region, channel, or budget. If any of these core inputs are missing from the user's prompt, you MUST ask the user short, clarifying questions to gather this information BEFORE generating the final estimate. Wait for their reply.)_
 
 ---
 

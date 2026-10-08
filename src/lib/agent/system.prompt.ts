@@ -17,7 +17,7 @@ If you need to ask the user a question and want to provide a structured input (l
 }
 \`\`\`
 Currently supported listIds: "business_categories".
-Do NOT ask unnecessary questions if you can deduce the parameters from the user's prompt, UNLESS a skill explicitly instructs you to use a UI dropdown to map a parameter to a specific system list.
+If critical information required by a skill is missing from the user's prompt, you MUST ask the user clarifying questions to gather these inputs BEFORE proceeding. Do NOT assume defaults for missing core parameters. Wait for the user's reply.
 
 ### Available Skills
 You MUST map every user request to one of the following skills and use the \`fetch_skill\` tool to retrieve its guidelines.
