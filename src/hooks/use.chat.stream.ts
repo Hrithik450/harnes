@@ -9,7 +9,7 @@ import { useAgentStore } from "@/store/agent.store";
 
 export function useChatStream() {
   const { addMessage, updateMessage, replaceMessage } = useThreadMessageStore();
-  const { activeThreadId, setActiveThreadId, addThread, setNewThread } =
+  const { activeThreadId, setActiveThreadId, addThread } =
     useThreadStore();
   const { streamingThreads, setStreamingThread } = useAgentStore();
 
@@ -116,7 +116,6 @@ export function useChatStream() {
 
           addThread(threadRes.data);
           setActiveThreadId(finalThreadId);
-          setNewThread(true);
           currentThreadId = finalThreadId;
 
           window.history.replaceState(null, "", `/chat/${finalThreadId}`);
@@ -380,7 +379,6 @@ export function useChatStream() {
         console.error("Failed to generate response, please try later.");
       } finally {
         setStreamingThread(currentThreadId, false);
-        setNewThread(false);
         if (abortControllersRef.current[currentThreadId] === controller) {
           delete abortControllersRef.current[currentThreadId];
         }
@@ -402,7 +400,6 @@ export function useChatStream() {
       setStreamingThread,
       setActiveThreadId,
       addThread,
-      setNewThread,
     ],
   );
 

@@ -31,7 +31,7 @@ export function MainChat({
   const params = useParams();
   const threadId = params?.id as string | undefined;
 
-  const { activeThreadId, setActiveThreadId, newThread } = useThreadStore();
+  const { activeThreadId, setActiveThreadId } = useThreadStore();
   const currentId = threadId || activeThreadId;
 
   const { messagesByThread, setMessages } = useThreadMessageStore();
@@ -73,10 +73,10 @@ export function MainChat({
   const { streamTurn, isStreaming } = useChatStream();
 
   useEffect(() => {
-    if (!newThread && threadId) {
+    if (threadId) {
       setMessages(threadId, initialMessages);
     }
-  }, [initialMessages, newThread, setMessages, threadId]);
+  }, [initialMessages, setMessages, threadId]);
 
   // Detect when user manually scrolls up so we stop hijacking
   useEffect(() => {

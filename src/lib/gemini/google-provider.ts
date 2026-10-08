@@ -1,11 +1,13 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { getGoogleApiKeyPool, GoogleApiKeyPool } from "./api-key-pool";
+import { getGoogleApiKeyPool, GoogleApiKeyPool, loadGoogleApiKeysFromEnv } from "./api-key-pool";
 
 export interface RoutingProviderOptions {
   /** The sequence of models to try in order */
   models: string[];
   /** Optional custom pool (defaults to the global shared API key pool) */
   pool?: GoogleApiKeyPool;
+  /** Optional list of API keys. If provided, creates an isolated pool for this provider. */
+  apiKeys?: string[];
   /** Optional label for logging (e.g. "titleGeneration") */
   label?: string;
 }
@@ -28,11 +30,16 @@ const serverWarn = (msg: string) => {
  */
 export function createRoutingGoogleProvider(options: RoutingProviderOptions) {
   const modelSequence = options.models;
+  const providerPool =
+    options.pool ??
+    (options.apiKeys
+      ? new GoogleApiKeyPool(options.apiKeys)
+      : getGoogleApiKeyPool());
 
   return createGoogleGenerativeAI({
     apiKey: "ROTATING_KEY",
     fetch: async (originalUrl, fetchOptionsInput) => {
-      const pool = options.pool ?? getGoogleApiKeyPool();
+      const pool = providerPool;
       const maxKeyAttempts = Math.max(1, pool.size);
       const triedKeys = new Set<string>();
       let lastResponse: Response | undefined;
@@ -125,6 +132,8 @@ export function createRoutingGoogleProvider(options: RoutingProviderOptions) {
   });
 }
 
+const allKeys = loadGoogleApiKeysFromEnv();
+
 // 1. Agent Orchestrator Routing
 export const agentProvider = createRoutingGoogleProvider({
   models: [
@@ -134,6 +143,7 @@ export const agentProvider = createRoutingGoogleProvider({
     "gemini-3.7-flash",
     "gemini-3.8-flash",
   ],
+  apiKeys: allKeys,
   label: "textGeneration",
 });
 export const defaultAgentModel = agentProvider("gemini-2.5-flash");
@@ -141,6 +151,7 @@ export const defaultAgentModel = agentProvider("gemini-2.5-flash");
 // 2. Thread Title Generation Routing
 export const titleProvider = createRoutingGoogleProvider({
   models: ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"],
+  apiKeys: allKeys,
   label: "titleGeneration",
 });
 export const defaultTitleModel = titleProvider("gemini-3.5-flash-lite");
