@@ -24,7 +24,6 @@ export const fetchSkillTool = tool({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   execute: async (args: any) => {
     const { skill_name } = args;
-    console.log(`\n🤖 [AI Tool Called] -> fetch_skill: Reading guidelines for '${skill_name}'`);
     
     const skill = SKILL_REGISTRY.find((s) => s.name === skill_name);
     if (!skill) {

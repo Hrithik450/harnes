@@ -24,6 +24,18 @@ export async function POST(req: Request) {
           threadId,
           message,
           (stepEvent: AgentStepResult) => {
+            for (const call of stepEvent.toolCalls || []) {
+              const toolName = call.toolName;
+              if (toolName === "fetch_skill") {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const args = (call as any).args || (call as any).input || {};
+                const skillName = args.skill_name || "unknown";
+                console.log(`[Agent] called skill: ${skillName}`);
+              } else {
+                console.log(`[Agent] called tool: ${toolName}`);
+              }
+            }
+
             const thoughts = extractThoughts(stepEvent, stepIndex);
 
             for (const thought of thoughts) {
