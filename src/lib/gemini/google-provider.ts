@@ -1,99 +1,146 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { getGoogleApiKeyPool } from "./api-key-pool";
+import { getGoogleApiKeyPool, GoogleApiKeyPool } from "./api-key-pool";
 
-export const googleProvider = createGoogleGenerativeAI({
-  apiKey: "ROTATING_KEY",
-  fetch: async (originalUrl, options) => {
-    const pool = getGoogleApiKeyPool();
-    const maxKeyAttempts = Math.max(1, pool.size);
-    const triedKeys = new Set<string>();
-    let lastResponse: Response | undefined;
-    let lastError: unknown;
+export interface RoutingProviderOptions {
+  /** The sequence of models to try in order */
+  models: string[];
+  /** Optional custom pool (defaults to the global shared API key pool) */
+  pool?: GoogleApiKeyPool;
+  /** Optional label for logging (e.g. "titleGeneration") */
+  label?: string;
+}
 
-    const MODEL_SEQUENCE = [
-      "gemini-2.5-flash",
-      "gemini-3.5-flash",
-      "gemini-3.6-flash",
-      "gemini-3.7-flash",
-      "gemini-3.8-flash",
-    ];
+// A global map to share model cooldowns across all provider instances
+// so a rate-limited model isn't accidentally hit by a different provider.
+const globalModelCooldowns = new Map<string, number>();
 
-    // Model-specific cooldowns map: `${apiKey}::${model}` -> timestamp
-    const modelCooldowns = new Map<string, number>();
+const serverLog = (msg: string) => {
+  if (typeof window === "undefined") console.log(msg);
+};
 
-    const isModelAvailable = (apiKey: string, model: string) => {
-      const until = modelCooldowns.get(`${apiKey}::${model}`);
-      return until == null || Date.now() >= until;
-    };
+const serverWarn = (msg: string) => {
+  if (typeof window === "undefined") console.warn(msg);
+};
 
-    const markModelCooldown = (apiKey: string, model: string, ms: number) => {
-      modelCooldowns.set(`${apiKey}::${model}`, Date.now() + ms);
-    };
+/**
+ * Creates a unified routing provider that strictly follows the provided model sequence
+ * and integrates with the API key pool for rate limiting and rotation.
+ */
+export function createRoutingGoogleProvider(options: RoutingProviderOptions) {
+  const modelSequence = options.models;
 
-    for (let keyAttempt = 0; keyAttempt < maxKeyAttempts; keyAttempt++) {
-      const apiKey = pool.acquire(triedKeys);
-      triedKeys.add(apiKey);
+  return createGoogleGenerativeAI({
+    apiKey: "ROTATING_KEY",
+    fetch: async (originalUrl, fetchOptionsInput) => {
+      const pool = options.pool ?? getGoogleApiKeyPool();
+      const maxKeyAttempts = Math.max(1, pool.size);
+      const triedKeys = new Set<string>();
+      let lastResponse: Response | undefined;
+      let lastError: unknown;
+      const logLabel = options.label ? `:${options.label}` : "";
 
-      const headers = new Headers(options?.headers);
-      headers.set("x-goog-api-key", apiKey);
-      const fetchOptions = { ...options, headers };
+      const isModelAvailable = (apiKey: string, model: string) => {
+        const until = globalModelCooldowns.get(`${apiKey}::${model}`);
+        return until == null || Date.now() >= until;
+      };
 
-      let keyFailedCompletely = true;
+      const markModelCooldown = (apiKey: string, model: string, ms: number) => {
+        globalModelCooldowns.set(`${apiKey}::${model}`, Date.now() + ms);
+      };
 
-      for (const currentModel of MODEL_SEQUENCE) {
-        if (!isModelAvailable(apiKey, currentModel)) {
-          continue; // skip this model on this key if it's cooling down
-        }
+      for (let keyAttempt = 0; keyAttempt < maxKeyAttempts; keyAttempt++) {
+        const apiKey = pool.acquire(triedKeys);
+        triedKeys.add(apiKey);
 
-        // Replace the model name in the requested URL
-        const urlString = originalUrl.toString();
-        const modifiedUrl = urlString.replace(
-          /\/models\/([^:]+):/,
-          `/models/${currentModel}:`,
-        );
+        const headers = new Headers(fetchOptionsInput?.headers);
+        headers.set("x-goog-api-key", apiKey);
+        const fetchOptions = { ...fetchOptionsInput, headers };
 
-        try {
-          const response = await fetch(modifiedUrl, fetchOptions);
-          lastResponse = response;
+        let keyFailedCompletely = true;
 
-          if (!response.ok) {
-            markModelCooldown(apiKey, currentModel, 60_000);
-            console.warn(
-              `[Router] Cause: HTTP ${response.status} | Switched: Model | Cooldown: 60s for ${currentModel} on ${pool.label(apiKey)}`,
-            );
-
-            try {
-              await response.text();
-            } catch {}
-
-            continue; // move to next model in sequence
+        for (const currentModel of modelSequence) {
+          if (!isModelAvailable(apiKey, currentModel)) {
+            continue; // skip this model on this key if it's cooling down
           }
 
-          // Success!
-          keyFailedCompletely = false;
-          return response;
-        } catch (error) {
-          lastError = error;
-          markModelCooldown(apiKey, currentModel, 60_000);
-          const errStr =
-            error instanceof Error ? error.message : "Unknown Error";
-          console.warn(
-            `[Router] Cause: ${errStr} | Switched: Model | Cooldown: 60s for ${currentModel} on ${pool.label(apiKey)}`,
+          // Force the URL to use the model defined by our sequence
+          const urlString = originalUrl.toString();
+          const modifiedUrl = urlString.replace(
+            /\/models\/([^:]+):/,
+            `/models/${currentModel}:`,
           );
-          continue; // move to next model in sequence
+
+          try {
+            const response = await fetch(modifiedUrl, fetchOptions);
+            lastResponse = response;
+
+            if (!response.ok) {
+              markModelCooldown(apiKey, currentModel, 60_000);
+              serverWarn(
+                `[Router${logLabel}] Cause: HTTP ${response.status} | Switched: Model | Cooldown: 60s for ${currentModel} on ${pool.label(apiKey)}`,
+              );
+
+              try {
+                await response.text();
+              } catch {}
+
+              continue; // move to next model in sequence
+            }
+
+            // Success!
+            keyFailedCompletely = false;
+            serverLog(
+              `[Model${logLabel}]: used ${currentModel} from ${pool.label(apiKey)}`,
+            );
+            return response;
+          } catch (error) {
+            // IMPORTANT: If the user simply aborted/cancelled the request, do not penalize the model.
+            if ((error as Error)?.name === "AbortError") {
+              throw error;
+            }
+
+            lastError = error;
+            markModelCooldown(apiKey, currentModel, 60_000);
+            const errStr =
+              error instanceof Error ? error.message : "Unknown Error";
+            serverWarn(
+              `[Router${logLabel}] Cause: ${errStr} | Switched: Model | Cooldown: 60s for ${currentModel} on ${pool.label(apiKey)}`,
+            );
+            continue; // move to next model in sequence
+          }
+        }
+
+        if (keyFailedCompletely) {
+          // All models threw an error or were skipped. Cool down the entire API key for 90s.
+          pool.markRateLimited(apiKey, 90_000);
+          serverWarn(
+            `[Router${logLabel}] Cause: All models failed | Switched: API Key | Cooldown: 90s for entire ${pool.label(apiKey)}`,
+          );
         }
       }
 
-      if (keyFailedCompletely) {
-        // All models threw an error or were skipped. Cool down the entire API key for 90s.
-        pool.markRateLimited(apiKey, 90_000);
-        console.warn(
-          `[Router] Cause: All models failed | Switched: API Key | Cooldown: 90s for entire ${pool.label(apiKey)}`,
-        );
-      }
-    }
+      if (lastResponse) return lastResponse;
+      throw lastError || new Error("All models and API keys failed.");
+    },
+  });
+}
 
-    if (lastResponse) return lastResponse;
-    throw lastError || new Error("All models and API keys failed.");
-  },
+// 1. Agent Orchestrator Routing
+export const agentProvider = createRoutingGoogleProvider({
+  models: [
+    "gemini-2.5-flash",
+    "gemini-3.5-flash",
+    "gemini-3.6-flash",
+    "gemini-3.7-flash",
+    "gemini-3.8-flash",
+  ],
+  label: "textGeneration",
 });
+export const defaultAgentModel = agentProvider("gemini-2.5-flash");
+
+// 2. Thread Title Generation Routing
+export const titleProvider = createRoutingGoogleProvider({
+  models: ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"],
+  label: "titleGeneration",
+});
+export const defaultTitleModel = titleProvider("gemini-3.5-flash-lite");

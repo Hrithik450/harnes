@@ -12,3 +12,6 @@ Follow these strict instructions for every interaction in this project:
    - **ALWAYS** use the dedicated edit tool (e.g., `replace_file_content` or `write_to_file`) to modify files.
    - If an edit fails or throws an error, **WAIT and RETRY** using the edit tool only.
    - **NEVER** use bash tools or terminal commands (like `sed`, `awk`, `echo`, `cat`) to edit files. Bash tools are strictly prohibited for file modifications.
+
+3. **Workspace Cleanup:**
+   - **ALWAYS** delete any temporary files, scratch scripts, or test files that you generate yourself once the task is complete and they are no longer needed.

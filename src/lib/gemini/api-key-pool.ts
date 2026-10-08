@@ -84,7 +84,7 @@ export class GoogleApiKeyPool {
       const key = this.keys[idx]!;
       if (exclude?.has(key)) continue;
       if (!this.isAvailable(key, now)) continue;
-      this.cursor = (idx + 1) % n;
+      this.cursor = idx; // Stick to this healthy key
       return key;
     }
 
@@ -101,12 +101,12 @@ export class GoogleApiKeyPool {
 
     if (best) {
       this.cooldownUntil.delete(best);
-      this.cursor = (this.keys.indexOf(best) + 1) % n;
+      this.cursor = this.keys.indexOf(best); // Stick to the best available key
       return best;
     }
 
     const fallback = this.keys[this.cursor % n]!;
-    this.cursor = (this.cursor + 1) % n;
+    // Do not advance cursor so we stay sticky even on fallback
     return fallback;
   }
 

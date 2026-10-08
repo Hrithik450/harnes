@@ -1,5 +1,5 @@
 import { generateText, isStepCount, type StepResult } from "ai";
-import { googleProvider } from "@/lib/gemini/google-provider";
+import { defaultAgentModel } from "@/lib/gemini/google-provider";
 import { ThreadMessageService } from "@/lib/services/thread.message.service";
 import { getSystemPrompt } from "./system.prompt";
 import { agentTools } from "./tools";
@@ -36,7 +36,7 @@ export async function runAgent(
   });
 
   const res = await generateText({
-    model: googleProvider("gemini-2.5-flash"),
+    model: defaultAgentModel,
     system: getSystemPrompt(),
     messages: contextMessages,
     stopWhen: isStepCount(5),

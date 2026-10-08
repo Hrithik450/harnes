@@ -1,5 +1,5 @@
 import { generateText } from "ai";
-import { googleProvider } from "@/lib/gemini/google-provider";
+import { defaultTitleModel } from "@/lib/gemini/google-provider";
 import { ThreadRepository } from "@/lib/repositories/thread.repository";
 import {
   ThreadResponse,
@@ -11,7 +11,7 @@ export class ThreadService {
   static async createTitle(userMessage: string): Promise<string> {
     try {
       const result = await generateText({
-        model: googleProvider("gemini-3.5-flash-lite"),
+        model: defaultTitleModel,
         system: "Generate a very short, concise title (max 4-5 words) for a conversation that starts with the following message. Respond ONLY with the title itself, no quotes, no extra text.",
         prompt: userMessage,
       });
