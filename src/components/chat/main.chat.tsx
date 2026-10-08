@@ -309,7 +309,7 @@ export function MainChat({
                     className={`flex ${message.role === "user" ? "justify-end" : ""}`}
                   >
                     {message.role === "assistant" ? (
-                      <div className="py-0.5 text-[15px] leading-normal text-zinc-200 max-w-full font-gothic prose prose-invert prose-p:my-1 prose-p:leading-relaxed prose-headings:my-1.5 prose-headings:font-semibold prose-h1:text-lg prose-h2:text-base prose-h3:text-[15px] prose-h3:mt-2 prose-h3:mb-1 prose-h4:text-[15px] prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-li:p-0 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 prose-hr:my-3 prose-hr:border-zinc-800/50 prose-pre:border-none prose-pre:bg-zinc-800/30 prose-code:border-none prose-code:bg-transparent prose-img:border-none prose-table:border-none border-none">
+                      <div className="py-0.5 text-[15px] leading-normal text-zinc-200 max-w-full font-gothic prose prose-invert prose-p:my-1 prose-p:leading-relaxed prose-headings:my-1.5 prose-headings:font-semibold prose-h1:text-lg prose-h2:text-base prose-h3:text-[15px] prose-h3:mt-2 prose-h3:mb-1 prose-h4:text-[15px] prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-li:p-0 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 prose-hr:my-3 prose-hr:border-zinc-800/50 prose-pre:border-none prose-pre:bg-zinc-800/30 prose-code:border-none prose-code:bg-transparent prose-img:m-0 prose-img:border-none prose-table:border-none border-none">
                         <ReactMarkdown 
                           remarkPlugins={[remarkGfm]}
                           components={{
