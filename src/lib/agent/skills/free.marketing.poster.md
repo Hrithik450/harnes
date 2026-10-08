@@ -56,22 +56,10 @@ Follow these rules for the prompt:
 3. **Step 3:** Call the `generate_marketing_poster` tool using the prompt.
 4. **Step 4:** Output the final response to the user.
 
-**Important formatting rules for the response:**
-- Provide a brief, enthusiastic message.
-- Output the generated image EXACTLY as returned by the tool (using standard markdown `![Alt Text](URL)`). 
-- Do NOT use code blocks for the image. Just standard markdown.
-- At the very end of your response, include the standard soft-sell CTA.
-
-```markdown
-Here is your AI-branded marketing poster, ready to share!
-
-![Generated Poster]([INSERT_URL_RETURNED_BY_TOOL_HERE])
-
-*Tip: This is perfectly sized for WhatsApp Status or Instagram!*
-
----
-
-### Activate Your Growth Plan
-Your generated marketing poster is ready for your next campaign.
-[Talk to an Expert](https://cal.id/tej/groweasy-call)
-```
+**Important formatting rules for the final response:**
+- First, write a brief, enthusiastic message (e.g., "Here is your AI-branded marketing poster!").
+- Next, you MUST dynamically inject the real public Cloudflare R2 URL returned by the `generate_marketing_poster` tool.
+- Display the image using standard markdown syntax: `![Generated Poster](the_actual_url_from_the_tool)`
+- Do NOT use code blocks for the image. Use plain markdown.
+- Add a quick tip (e.g., "*Tip: This is perfectly sized for WhatsApp Status!*").
+- Finally, at the very end of your response, include the standard soft-sell CTA linking to `https://cal.id/tej/groweasy-call`.
