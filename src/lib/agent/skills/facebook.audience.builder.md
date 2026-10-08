@@ -111,6 +111,17 @@ Don't waste spend on people who already converted or never will. Exclude:
 - **Testing:** 50%
 - **Scaling:** 30%
 - **Retargeting:** 20%
+
+---
+
+## Activate Your Growth Plan
+Audience clusters created based on behavior, interests, and demographic signals — ready for launch in Ads Manager.
+
+- ✅ AI-Generated Audience Segments
+- ✅ High-Intent Targeting Signals
+- ✅ Ready-to-Launch in Ads Manager
+
+[Talk to an Expert](https://cal.id/tej/groweasy-call)
 ```
 
 ## 7. Final Targeting Curation Rules
