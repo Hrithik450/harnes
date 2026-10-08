@@ -4,9 +4,6 @@ import { type Thread } from "@/lib/repositories/types/thread.types";
 interface ThreadState {
   activeThreadId: string | null;
   threads: Thread[];
-  /** True while a brand-new thread is being streamed for the first time.
-   *  Used to block setMessages() from wiping optimistic messages when
-   *  Next.js soft-navigates to the new /chat/[id] URL mid-stream. */
   newThread: boolean;
   setActiveThreadId: (id: string | null) => void;
   setThreads: (threads: Thread[]) => void;
@@ -32,7 +29,7 @@ export const useThreadStore = create<ThreadState>((set) => ({
   updateThread: (id, updatedThread) =>
     set((state) => ({
       threads: state.threads.map((t) =>
-        t.id === id ? { ...t, ...updatedThread } : t
+        t.id === id ? { ...t, ...updatedThread } : t,
       ),
     })),
 
@@ -41,9 +38,7 @@ export const useThreadStore = create<ThreadState>((set) => ({
       // If the replaced thread was active, update activeThreadId too
       const isActive = state.activeThreadId === tempId;
       return {
-        threads: state.threads.map((t) =>
-          t.id === tempId ? savedThread : t
-        ),
+        threads: state.threads.map((t) => (t.id === tempId ? savedThread : t)),
         activeThreadId: isActive ? savedThread.id : state.activeThreadId,
       };
     }),

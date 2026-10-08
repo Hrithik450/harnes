@@ -6,16 +6,6 @@ export const validateMetaInterestsTool = tool({
     "Validate whether a proposed audience interest is currently targetable on Meta (Facebook/Instagram) and retrieve its exact audience size.",
   parameters: z.object({
     interest_query: z.string().describe("The interest keyword to search for on Meta."),
-    title: z
-      .string()
-      .describe(
-        "A short, user-friendly description of your current thought process (e.g., 'Validating audience...').",
-      ),
-    subtitle: z
-      .string()
-      .describe(
-        "A brief explanation of what you are reading (e.g., 'Checking if interest is still available on Meta').",
-      ),
   }),
   execute: async (args: { interest_query: string; title?: string; subtitle?: string }) => {
     try {

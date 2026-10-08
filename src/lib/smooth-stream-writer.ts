@@ -2,6 +2,8 @@ export interface SmoothStreamWriter {
   push: (chunk: string) => void;
   /** Instantly reveal everything (stop / abort only). */
   flush: () => void;
+  /** Change the reveal speed mid-flight (chars per second). */
+  setCharsPerSecond: (charsPerSecond: number) => void;
   /** Drop all buffered text without painting (caller must clear the bubble). */
   reset: () => void;
   /** Keep revealing at the current pace until display catches up, or until maxWaitMs. */
@@ -17,6 +19,13 @@ export interface CreateSmoothStreamWriterOptions {
   charsPerSecond?: number;
   /** Hard cap per animation frame to prevent burst-dumps. @default 12 */
   maxCharsPerFrame?: number;
+  /**
+   * Speed up when a backlog builds up. Right for token-by-token network
+   * streams, where a burst means we're falling behind. Set `false` when the
+   * whole text is handed over at once and should still reveal at a steady,
+   * readable pace. @default true
+   */
+  catchUp?: boolean;
 }
 
 /** Backlog (chars) that starts doubling the reveal speed. */
@@ -27,8 +36,9 @@ const MAX_CATCH_UP = 8;
 export function createSmoothStreamWriter(
   options: CreateSmoothStreamWriterOptions,
 ): SmoothStreamWriter {
-  const charsPerSecond = Math.max(1, options.charsPerSecond ?? 180);
+  let charsPerSecond = Math.max(1, options.charsPerSecond ?? 180);
   const maxCharsPerFrame = Math.max(1, options.maxCharsPerFrame ?? 12);
+  const catchUpEnabled = options.catchUp ?? true;
 
   let received = "";
   let displayed = "";
@@ -61,9 +71,13 @@ export function createSmoothStreamWriter(
 
     if (displayed.length < received.length) {
       const lag = received.length - displayed.length;
-      // When network delivers tokens in bursts, speed up dynamically.
-      const catchUp = Math.min(MAX_CATCH_UP, 1 + lag / CATCH_UP_LAG_CHARS);
-      carry += elapsedSec * charsPerSecond * catchUp;
+      // When the network delivers tokens in bursts, speed up dynamically. With
+      // catchUp disabled the pace stays flat, which is what we want when the
+      // entire text lands at once and should still read like a steady stream.
+      const multiplier = catchUpEnabled
+        ? Math.min(MAX_CATCH_UP, 1 + lag / CATCH_UP_LAG_CHARS)
+        : 1;
+      carry += elapsedSec * charsPerSecond * multiplier;
       let step = Math.floor(carry);
       carry -= step;
 
@@ -71,10 +85,14 @@ export function createSmoothStreamWriter(
 
       // If lag is significant, expand frame capacity so text catches up smoothly.
       const frameLimit =
-        lag > 100
+        catchUpEnabled && lag > 100
           ? Math.max(maxCharsPerFrame, Math.ceil(lag / 6))
           : maxCharsPerFrame;
-      step = Math.min(lag, Math.max(step, lag > 200 ? 8 : 1), frameLimit);
+      step = Math.min(
+        lag,
+        Math.max(step, catchUpEnabled && lag > 200 ? 8 : 1),
+        frameLimit,
+      );
 
       if (step > 0) {
         displayed = received.slice(0, displayed.length + step);
@@ -108,6 +126,10 @@ export function createSmoothStreamWriter(
       displayed = received;
       options.onFlush(displayed);
       settleDrain();
+    },
+    setCharsPerSecond(next: number) {
+      charsPerSecond = Math.max(1, next);
+      schedule();
     },
     reset() {
       if (disposed) return;

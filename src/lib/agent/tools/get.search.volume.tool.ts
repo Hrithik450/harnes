@@ -7,16 +7,6 @@ export const getSearchVolumeTool = tool({
   parameters: z.object({
     keywords: z.array(z.string()).describe("Array of keywords to look up."),
     location_name: z.string().optional().describe("Location name, e.g., 'United States' or 'India'."),
-    title: z
-      .string()
-      .describe(
-        "A short, user-friendly description of your current thought process (e.g., 'Analyzing search demand...').",
-      ),
-    subtitle: z
-      .string()
-      .describe(
-        "A brief explanation of what you are searching for (e.g., 'Pulling live CPC and volume data').",
-      ),
   }),
   execute: async (args: { keywords: string[]; location_name?: string; title?: string; subtitle?: string }) => {
     

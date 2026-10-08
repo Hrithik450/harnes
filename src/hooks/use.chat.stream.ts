@@ -1,31 +1,45 @@
-import { useCallback, useRef, startTransition } from "react";
 import { useThreadStore } from "@/store/thread.store";
+import { useCallback, useRef, startTransition } from "react";
 import { useThreadMessageStore } from "@/store/thread.message.store";
 import { createThreadAction } from "@/lib/actions/chat/thread.action";
 import { createMessageAction } from "@/lib/actions/chat/thread.messages.action";
-import { useAgentStore } from "@/store/agent.store";
-import { toast } from "sonner";
 import { createSmoothStreamWriter } from "@/lib/smooth-stream-writer";
+import { createThoughtRevealScheduler } from "@/lib/thought-reveal-scheduler";
+import { useAgentStore } from "@/store/agent.store";
 
 export function useChatStream() {
   const { addMessage, updateMessage, replaceMessage } = useThreadMessageStore();
-  const { activeThreadId, setActiveThreadId, addThread, setNewThread } = useThreadStore();
+  const { activeThreadId, setActiveThreadId, addThread, setNewThread } =
+    useThreadStore();
   const { streamingThreads, setStreamingThread } = useAgentStore();
 
-  const isStreaming = activeThreadId ? !!streamingThreads[activeThreadId] : false;
+  const isStreaming = activeThreadId
+    ? !!streamingThreads[activeThreadId]
+    : false;
 
   const abortControllersRef = useRef<Record<string, AbortController>>({});
-  const writersRef = useRef<Record<string, ReturnType<typeof createSmoothStreamWriter>>>({});
+  const writersRef = useRef<
+    Record<string, ReturnType<typeof createSmoothStreamWriter>>
+  >({});
+  const revealersRef = useRef<
+    Record<string, ReturnType<typeof createThoughtRevealScheduler>>
+  >({});
 
   const stopStream = useCallback(() => {
     if (!activeThreadId) return;
-    
+
     const controller = abortControllersRef.current[activeThreadId];
     if (controller) {
       controller.abort();
       delete abortControllersRef.current[activeThreadId];
     }
-    
+
+    const revealer = revealersRef.current[activeThreadId];
+    if (revealer) {
+      revealer.dispose();
+      delete revealersRef.current[activeThreadId];
+    }
+
     const writer = writersRef.current[activeThreadId];
     if (writer) {
       writer.flush();
@@ -37,7 +51,6 @@ export function useChatStream() {
 
   const streamTurn = useCallback(
     async (userMessage: string) => {
-      // ── Step 1: Immediate Optimistic UI ──────────────────────────────────
       let currentThreadId = activeThreadId;
       let isNewThread = false;
       let tempThreadId: string | null = null;
@@ -60,7 +73,7 @@ export function useChatStream() {
         content: userMessage,
         created_at: new Date(),
       });
-      
+
       // Abort any previous stream for THIS thread
       if (abortControllersRef.current[currentThreadId]) {
         abortControllersRef.current[currentThreadId].abort();
@@ -74,7 +87,6 @@ export function useChatStream() {
       setStreamingThread(currentThreadId, true); // Show "Chief is thinking..."
       useAgentStore.getState().clearSteps(currentThreadId);
 
-      // ── Step 2: Create Thread in DB if New ──────────────────────────────
       if (isNewThread && tempThreadId) {
         const threadRes = await createThreadAction(
           { title: "New Chat" },
@@ -83,44 +95,49 @@ export function useChatStream() {
 
         if (threadRes.success && threadRes.data) {
           const finalThreadId = threadRes.data.id;
-          
-          // Migrate temp thread state to real thread ID
-          const currentMessages = useThreadMessageStore.getState().messagesByThread[tempThreadId] || [];
-          useThreadMessageStore.getState().setMessages(finalThreadId, currentMessages.map(m => ({ ...m, thread_id: finalThreadId })));
-          
+
+          const currentMessages =
+            useThreadMessageStore.getState().messagesByThread[tempThreadId] ||
+            [];
+          useThreadMessageStore.getState().setMessages(
+            finalThreadId,
+            currentMessages.map((m) => ({ ...m, thread_id: finalThreadId })),
+          );
+
           // Migrate steps and streaming state
-          const currentSteps = useAgentStore.getState().stepsByThread[tempThreadId] || [];
+          const currentSteps =
+            useAgentStore.getState().stepsByThread[tempThreadId] || [];
           useAgentStore.getState().stepsByThread[finalThreadId] = currentSteps;
-          
+
+          setStreamingThread(tempThreadId, false);
           setStreamingThread(finalThreadId, true);
           abortControllersRef.current[finalThreadId] = controller;
           delete abortControllersRef.current[tempThreadId];
-          
+
           addThread(threadRes.data);
           setActiveThreadId(finalThreadId);
           setNewThread(true);
           currentThreadId = finalThreadId;
-          
+
           window.history.replaceState(null, "", `/chat/${finalThreadId}`);
         } else {
-          toast.error("Thread creation failed, please try later.");
+          console.error("Thread creation failed, please try later.");
           setStreamingThread(tempThreadId, false);
           return;
         }
       }
 
-      const finalThreadId = currentThreadId;
-
-
-
-      // ── Step 4: Stream response with smooth RAF-based rendering ───────────
+      // ── Step 4: Stream response ───────────────────────────────────────────
+      // Thoughts are revealed on a client-side cadence; final text is buffered
+      // and only released once every thought has been revealed, so the UI shows
+      // "thinking → thoughts → text" in that order, every time.
       try {
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message: userMessage,
-            threadId: finalThreadId,
+            threadId: currentThreadId,
           }),
           signal: controller.signal,
         });
@@ -134,28 +151,79 @@ export function useChatStream() {
         let assistantMessageAdded = false;
 
         const writer = createSmoothStreamWriter({
+          // The whole response is released at once, so catch-up would dump it.
+          // A flat rate is what makes it read like a real stream.
+          catchUp: false,
           charsPerSecond: 180,
-          maxCharsPerFrame: 12,
+          maxCharsPerFrame: 8,
           onFlush: (displayed) => {
             startTransition(() => {
               if (controller.signal.aborted) return;
               if (!assistantMessageAdded) {
                 addMessage({
                   id: assistantTempId,
-                  thread_id: finalThreadId,
+                  thread_id: currentThreadId,
                   role: "assistant",
                   content: displayed,
                   created_at: new Date(),
                 });
                 assistantMessageAdded = true;
               } else {
-                updateMessage(finalThreadId, assistantTempId, { content: displayed });
+                updateMessage(currentThreadId, assistantTempId, {
+                  content: displayed,
+                });
               }
             });
           },
         });
 
-        writersRef.current[finalThreadId] = writer;
+        writersRef.current[currentThreadId] = writer;
+
+        // Reveals thoughts one-by-one; the final text waits until this drains.
+        const reveal = createThoughtRevealScheduler({
+          onReveal: (thought) => {
+            if (controller.signal.aborted) return;
+            useAgentStore.getState().addStep(currentThreadId, {
+              id: thought.id,
+              title: thought.title,
+              subtitle: thought.subtitle,
+              status: "running",
+            });
+          },
+          onComplete: (thoughtId) => {
+            if (controller.signal.aborted) return;
+            useAgentStore
+              .getState()
+              .updateStep(currentThreadId, thoughtId, { status: "completed" });
+          },
+        });
+
+        revealersRef.current[currentThreadId] = reveal;
+
+        // Text is buffered here until thoughts finish revealing.
+        const pendingText: string[] = [];
+        let textReleased = false;
+        const releaseText = () => {
+          if (textReleased || controller.signal.aborted) return;
+          textReleased = true;
+          for (const t of pendingText) writer.push(t);
+          pendingText.length = 0;
+
+          // Pace the reveal so the whole answer lands in a comfortable window:
+          // ~3s for a one-liner, capping out around 9s for a long reply, so a
+          // big response never drags and a short one never flashes past.
+          const total = writer.getReceived().length;
+          if (total > 0) {
+            const targetSeconds = Math.min(9, Math.max(3, total / 220));
+            writer.setCharsPerSecond(
+              Math.min(420, Math.max(90, total / targetSeconds)),
+            );
+          }
+        };
+
+        const thoughtsDrained = reveal.whenDrained().then(() => {
+          if (!controller.signal.aborted) releaseText();
+        });
 
         let buffer = "";
 
@@ -172,87 +240,103 @@ export function useChatStream() {
           if (!chunkText) continue;
 
           buffer += chunkText;
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || ''; // Keep the last incomplete line
 
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const dataStr = line.slice(6).trim();
-              if (dataStr === '[DONE]') continue;
-              
-              try {
-                const data = JSON.parse(dataStr);
-                
-                if (data.type === 'text-delta') {
-                  const delta = data.delta ?? data.textDelta;
-                  if (delta) {
-                    assistantContent += delta;
-                    writer.push(delta);
-                  }
-                } 
-                else if (data.type === 'tool-input-available' || data.type === 'tool-call') {
-                  const toolCallId = data.toolCallId;
-                  const toolName = data.toolName;
-                  
-                  let args = data.input ?? data.args;
-                  if (typeof args === "string") {
-                    try { args = JSON.parse(args); } catch {}
-                  }
-                  
-                  let title = `Using ${toolName.replace(/_/g, ' ')}`.replace(/fetch(_|\s)skill/ig, 'knowledge base');
-                  let subtitle = "";
-                  
-                  if (args && typeof args === 'object') {
-                    const typedArgs = args as Record<string, unknown>;
-                    if (typeof typedArgs.title === 'string') {
-                      title = typedArgs.title.replace(/fetch(_|\s)skill/ig, 'knowledge base');
-                    }
-                    if (typeof typedArgs.subtitle === 'string') subtitle = typedArgs.subtitle;
-                  }
-                  
-                  useAgentStore.getState().addStep(finalThreadId, {
-                    id: toolCallId,
-                    title,
-                    subtitle,
-                    status: 'running'
-                  });
-                }
-                else if (data.type === 'tool-output-available' || data.type === 'tool-result') {
-                  useAgentStore.getState().updateStep(finalThreadId, data.toolCallId, {
-                    status: 'completed'
-                  });
-                }
-                else if (data.type === 'tool-output-error') {
-                  useAgentStore.getState().updateStep(finalThreadId, data.toolCallId, {
-                    status: 'failed'
-                  });
-                }
-              } catch {
-                // Ignore parse errors on partial chunks if any
+          // SSE events are separated by a blank line (\n\n). Parse whole blocks
+          // only and keep the trailing partial block buffered; the `event:`
+          // name can otherwise be lost if a chunk splits the event/data lines.
+          const blocks = buffer.split("\n\n");
+          buffer = blocks.pop() || "";
+
+          for (const block of blocks) {
+            let eventName = "message";
+            const dataLines: string[] = [];
+
+            for (const line of block.split("\n")) {
+              if (line.startsWith("event:")) {
+                eventName = line.slice(6).trim();
+              } else if (line.startsWith("data:")) {
+                dataLines.push(line.slice(5).replace(/^ /, ""));
               }
+            }
+
+            if (dataLines.length === 0) continue;
+            const dataStr = dataLines.join("\n").trim();
+            if (dataStr === "[DONE]") continue;
+
+            let data: unknown;
+            try {
+              data = JSON.parse(dataStr);
+            } catch {
+              data = dataStr;
+            }
+
+            if (eventName === "thought") {
+              const t = data as {
+                id: string;
+                title: string;
+                subtitle?: string;
+              };
+              reveal.enqueue({ id: t.id, title: t.title, subtitle: t.subtitle });
+            } else if (eventName === "thoughtsDone") {
+              reveal.seal();
+            } else if (eventName === "assistantResponse") {
+              const textDelta = typeof data === "string" ? data : "";
+              if (textDelta) {
+                assistantContent += textDelta;
+                if (textReleased) writer.push(textDelta);
+                else pendingText.push(textDelta);
+              }
+            } else if (eventName === "error") {
+              console.error("Server reported stream error:", data);
             }
           }
         }
 
-        if (!controller.signal.aborted && writersRef.current[finalThreadId] === writer) {
-          await writer.drain(800);
+        // The reader is done, so no further thoughts can arrive — seal here as a
+        // safety net in case the server died before sending `thoughtsDone`.
+        // Without this, `whenDrained()` could never resolve and the response
+        // would never be released.
+        reveal.seal();
+
+        // Wait for the thought panel to finish, but never hang on cosmetics.
+        await Promise.race([
+          thoughtsDrained,
+          new Promise((resolve) => setTimeout(resolve, 8000)),
+        ]);
+        releaseText();
+
+        if (
+          !controller.signal.aborted &&
+          writersRef.current[currentThreadId] === writer
+        ) {
+          // Let the released text reveal at its own pace, with a ceiling scaled
+          // to how much there is to show. The timer also covers a backgrounded
+          // tab, where requestAnimationFrame stops firing entirely.
+          const pendingChars = writer.getReceived().length;
+          await writer.drain(Math.max(4000, pendingChars * 16));
           writer.flush();
           const finalText = writer.getReceived();
           if (finalText) {
             startTransition(() => {
-              updateMessage(finalThreadId, assistantTempId, { content: finalText });
+              updateMessage(currentThreadId, assistantTempId, {
+                content: finalText,
+              });
             });
           }
           writer.dispose();
-          delete writersRef.current[finalThreadId];
+          delete writersRef.current[currentThreadId];
+        }
+
+        reveal.dispose();
+        if (revealersRef.current[currentThreadId] === reveal) {
+          delete revealersRef.current[currentThreadId];
         }
 
         if (controller.signal.aborted) return;
 
-        // ── Step 5: Persist messages sequentially ────────────────────────
         const savedUserMsgRes = await createMessageAction(
           {
-            thread_id: finalThreadId,
+            thread_id: currentThreadId,
             role: "user",
             content: userMessage,
           },
@@ -260,14 +344,14 @@ export function useChatStream() {
         );
 
         if (savedUserMsgRes.success && savedUserMsgRes.data) {
-          replaceMessage(finalThreadId, userTempId, savedUserMsgRes.data);
+          replaceMessage(currentThreadId, userTempId, savedUserMsgRes.data);
         } else {
-          toast.error("User message could not be saved, please try later.");
+          console.error("User message could not be saved, please try later.");
         }
 
         const savedAssistantMsgRes = await createMessageAction(
           {
-            thread_id: finalThreadId,
+            thread_id: currentThreadId,
             role: "assistant",
             content: assistantContent,
           },
@@ -275,9 +359,15 @@ export function useChatStream() {
         );
 
         if (savedAssistantMsgRes.success && savedAssistantMsgRes.data) {
-          replaceMessage(finalThreadId, assistantTempId, savedAssistantMsgRes.data);
+          replaceMessage(
+            currentThreadId,
+            assistantTempId,
+            savedAssistantMsgRes.data,
+          );
         } else {
-          toast.error("Assistant message could not be saved, please try later.");
+          console.error(
+            "Assistant message could not be saved, please try later.",
+          );
         }
       } catch (err: unknown) {
         if (
@@ -287,16 +377,20 @@ export function useChatStream() {
           return;
         }
         console.error("Stream error:", err);
-        toast.error("Failed to generate response, please try later.");
+        console.error("Failed to generate response, please try later.");
       } finally {
-        setStreamingThread(finalThreadId, false);
+        setStreamingThread(currentThreadId, false);
         setNewThread(false);
-        if (abortControllersRef.current[finalThreadId] === controller) {
-          delete abortControllersRef.current[finalThreadId];
+        if (abortControllersRef.current[currentThreadId] === controller) {
+          delete abortControllersRef.current[currentThreadId];
         }
-        if (writersRef.current[finalThreadId]) {
-          writersRef.current[finalThreadId].dispose();
-          delete writersRef.current[finalThreadId];
+        if (writersRef.current[currentThreadId]) {
+          writersRef.current[currentThreadId].dispose();
+          delete writersRef.current[currentThreadId];
+        }
+        if (revealersRef.current[currentThreadId]) {
+          revealersRef.current[currentThreadId].dispose();
+          delete revealersRef.current[currentThreadId];
         }
       }
     },

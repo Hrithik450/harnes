@@ -6,16 +6,6 @@ export const searchWebTool = tool({
     "Search the web for current information, competitor data, or news using the Tavily API.",
   parameters: z.object({
     query: z.string().describe("The search query to execute."),
-    title: z
-      .string()
-      .describe(
-        "A short, user-friendly description of your current thought process (e.g., 'Searching the web...').",
-      ),
-    subtitle: z
-      .string()
-      .describe(
-        "A brief explanation of what you are searching for (e.g., 'Looking up competitor pricing').",
-      ),
   }),
   execute: async (args: { query: string; title?: string; subtitle?: string }) => {
     try {

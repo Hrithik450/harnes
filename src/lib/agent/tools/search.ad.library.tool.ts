@@ -6,16 +6,6 @@ export const searchAdLibraryTool = tool({
     "Search the Meta Ad Library for currently active ads by a competitor's domain or keyword to see their ad copy and creative formats.",
   parameters: z.object({
     search_term: z.string().describe("The domain or keyword to search in the ad library."),
-    title: z
-      .string()
-      .describe(
-        "A short, user-friendly description of your current thought process (e.g., 'Spying on competitors...').",
-      ),
-    subtitle: z
-      .string()
-      .describe(
-        "A brief explanation of what you are reading (e.g., 'Loading active Meta ads').",
-      ),
   }),
   execute: async (args: { search_term: string; title?: string; subtitle?: string }) => {
     try {

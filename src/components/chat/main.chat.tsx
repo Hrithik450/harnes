@@ -3,14 +3,22 @@
 import { useParams } from "next/navigation";
 import { useThreadStore } from "@/store/thread.store";
 import remarkGfm from "remark-gfm";
-import { Plus, Mic, Image as ImageIcon, Pen, Globe, CheckCircle2, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Mic,
+  Image as ImageIcon,
+  Pen,
+  Globe,
+  CheckCircle2,
+  Loader2,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import React, { useEffect, useRef, useState } from "react";
 import { useThreadMessageStore } from "@/store/thread.message.store";
 import { ThreadMessage } from "@/lib/repositories/types/thread.message.types";
 import { useChatStream } from "@/hooks/use.chat.stream";
 import { DropdownItem } from "./dropdown.item";
-import TextareaAutosize from 'react-textarea-autosize';
+import TextareaAutosize from "react-textarea-autosize";
 import { useAgentStore } from "@/store/agent.store";
 
 const EMPTY_MESSAGES: ThreadMessage[] = [];
@@ -22,17 +30,30 @@ export function MainChat({
 }) {
   const params = useParams();
   const threadId = params?.id as string | undefined;
-  
+
   const { activeThreadId, setActiveThreadId, newThread } = useThreadStore();
   const currentId = threadId || activeThreadId;
 
   const { messagesByThread, setMessages } = useThreadMessageStore();
   const messages = currentId
-    ? messagesByThread[currentId] || (currentId === threadId ? initialMessages : EMPTY_MESSAGES)
+    ? messagesByThread[currentId] ||
+      (currentId === threadId ? initialMessages : EMPTY_MESSAGES)
     : EMPTY_MESSAGES;
 
   const { stepsByThread } = useAgentStore();
   const steps = currentId ? stepsByThread[currentId] || [] : [];
+
+  const displaySteps =
+    steps.length > 0
+      ? steps
+      : [
+          {
+            id: "step_init_placeholder",
+            title: "Analyzing request",
+            subtitle: "Evaluating task requirements & preparing response",
+            status: "running" as const,
+          },
+        ];
 
   const [inputValue, setInputValue] = useState("");
 
@@ -83,7 +104,9 @@ export function MainChat({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleManualSubmit = async (e: React.FormEvent | React.KeyboardEvent) => {
+  const handleManualSubmit = async (
+    e: React.FormEvent | React.KeyboardEvent,
+  ) => {
     e.preventDefault();
     if (!inputValue.trim() || isStreaming) return;
 
@@ -95,13 +118,17 @@ export function MainChat({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleManualSubmit(e);
     }
   };
 
-  let activeUiAction = null as { type: string; listId: string; message: string } | null;
+  let activeUiAction = null as {
+    type: string;
+    listId: string;
+    message: string;
+  } | null;
   const parsedMessages = messages.map((message, index) => {
     let textContent = message.content as string;
     const isLast = index === messages.length - 1;
@@ -160,7 +187,10 @@ export function MainChat({
 
             <div className="w-full">
               {/* Input Form */}
-              <form onSubmit={handleManualSubmit} className="w-full relative mb-8">
+              <form
+                onSubmit={handleManualSubmit}
+                className="w-full relative mb-8"
+              >
                 <div className="flex items-end bg-[#2a2a2a] rounded-2xl pl-2 pr-2 py-2 transition-colors">
                   <button
                     type="button"
@@ -175,9 +205,9 @@ export function MainChat({
                     placeholder="Message Chief"
                     maxRows={8}
                     className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none font-gothic text-zinc-200 placeholder:text-zinc-500 shadow-none px-4 py-1.5 text-[16px] resize-none overflow-y-auto"
-                    style={{ 
-                      boxShadow: "none", 
-                      border: "none", 
+                    style={{
+                      boxShadow: "none",
+                      border: "none",
                       outline: "none",
                       WebkitBoxShadow: "none",
                     }}
@@ -269,8 +299,9 @@ export function MainChat({
             >
               {cluster.messages.map((message, indexInCluster) => {
                 const groupedWithPrevious = indexInCluster > 0;
-                const groupedWithNext = indexInCluster < cluster.messages.length - 1;
-                
+                const groupedWithNext =
+                  indexInCluster < cluster.messages.length - 1;
+
                 return (
                   <div
                     key={message.id}
@@ -284,13 +315,17 @@ export function MainChat({
                       </div>
                     ) : (
                       <div className="relative group max-w-[75%]">
-                        <div 
+                        <div
                           className="bg-[#e4e4e4] text-zinc-900 px-5 py-2.5 text-[15px] font-gothic break-words"
                           style={{
                             borderTopLeftRadius: "24px",
                             borderBottomLeftRadius: "24px",
-                            borderTopRightRadius: groupedWithPrevious ? "4px" : "24px",
-                            borderBottomRightRadius: groupedWithNext ? "4px" : "24px",
+                            borderTopRightRadius: groupedWithPrevious
+                              ? "4px"
+                              : "24px",
+                            borderBottomRightRadius: groupedWithNext
+                              ? "4px"
+                              : "24px",
                           }}
                         >
                           {message.content as string}
@@ -302,9 +337,9 @@ export function MainChat({
               })}
             </div>
           ))}
-          {(isStreaming && messages.length > 0) && (
-            messages[messages.length - 1].role === "user" || steps.some(step => step.status === "running")
-          ) && (
+          {isStreaming &&
+            messages.length > 0 &&
+            messages[messages.length - 1].role === "user" && (
               <div className="flex flex-col mb-4 py-2 px-3 md:px-2 w-full max-w-full transition-all duration-200">
                 <div className="flex items-center space-x-3 mb-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -317,12 +352,13 @@ export function MainChat({
                     Chief is thinking...
                   </span>
                 </div>
-                
-                {steps.length > 0 && (
+
+                {displaySteps.length > 0 && (
                   <div className="relative max-h-48 overflow-y-auto pr-1 flex flex-col ml-8 mt-1">
-                    {steps.map((step, idx) => {
-                      const isLast = idx === steps.length - 1;
-                      const isRunning = step.status === "running" || (isLast && !step.status);
+                    {displaySteps.map((step, idx) => {
+                      const isLast = idx === displaySteps.length - 1;
+                      const isRunning =
+                        step.status === "running" || (isLast && !step.status);
                       const isFailed = step.status === "failed";
                       const isCompleted = step.status === "completed";
 
@@ -346,12 +382,18 @@ export function MainChat({
                             {!isLast && (
                               <div
                                 className="w-px flex-1 my-0.5 min-h-[14px]"
-                                style={{ backgroundColor: "rgba(161, 161, 170, 0.2)" }}
+                                style={{
+                                  backgroundColor: "rgba(161, 161, 170, 0.2)",
+                                }}
                               />
                             )}
                           </div>
-                          <div className={`flex flex-col min-w-0 flex-1 leading-snug ${!isLast ? "pb-2.5" : "pb-0.5"}`}>
-                            <span className={`${isRunning ? "text-zinc-300 font-medium" : "text-zinc-500"}`}>
+                          <div
+                            className={`flex flex-col min-w-0 flex-1 leading-snug ${!isLast ? "pb-2.5" : "pb-0.5"}`}
+                          >
+                            <span
+                              className={`${isRunning ? "text-zinc-300 font-medium" : "text-zinc-500"}`}
+                            >
                               {step.title}
                             </span>
                             {step.subtitle && (
@@ -403,9 +445,9 @@ export function MainChat({
               placeholder="Message Chief"
               maxRows={8}
               className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none font-gothic text-zinc-200 placeholder:text-zinc-500 shadow-none px-4 py-1.5 text-[15px] resize-none overflow-y-auto"
-              style={{ 
-                boxShadow: "none", 
-                border: "none", 
+              style={{
+                boxShadow: "none",
+                border: "none",
                 outline: "none",
                 WebkitBoxShadow: "none",
               }}

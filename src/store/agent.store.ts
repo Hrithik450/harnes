@@ -34,6 +34,19 @@ export const useAgentStore = create<AgentState>((set) => ({
   addStep: (threadId, step) =>
     set((state) => {
       const currentSteps = state.stepsByThread[threadId] || [];
+      const existingIdx = currentSteps.findIndex((s) => s.id === step.id);
+      
+      if (existingIdx !== -1) {
+        const newSteps = [...currentSteps];
+        newSteps[existingIdx] = { ...newSteps[existingIdx], ...step };
+        return {
+          stepsByThread: {
+            ...state.stepsByThread,
+            [threadId]: newSteps,
+          },
+        };
+      }
+      
       return {
         stepsByThread: {
           ...state.stepsByThread,

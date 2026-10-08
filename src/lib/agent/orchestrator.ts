@@ -1,10 +1,21 @@
-import { streamText, isLoopFinished } from "ai";
+import { generateText, isStepCount, type StepResult } from "ai";
 import { googleProvider } from "@/lib/gemini/custom-google-provider";
 import { ThreadMessageService } from "@/lib/services/thread.message.service";
 import { getSystemPrompt } from "./system.prompt";
 import { agentTools } from "./tools";
 
-export async function runAgent(threadId: string | undefined, message: string) {
+/** One finished LLM step of a run, as handed to `onStepFinish`. */
+export type AgentStepResult = StepResult<typeof agentTools>;
+
+export type AgentStepHandler = (
+  event: AgentStepResult,
+) => Promise<void> | void;
+
+export async function runAgent(
+  threadId: string | undefined,
+  message: string,
+  onStepFinish?: AgentStepHandler,
+) {
   let contextMessages: {
     role: "user" | "assistant" | "system";
     content: string;
@@ -27,14 +38,18 @@ export async function runAgent(threadId: string | undefined, message: string) {
     content: message,
   });
 
-  const res = streamText({
-    model: googleProvider("gemini-3.5-flash-lite"),
+  const res = await generateText({
+    model: googleProvider("gemini-2.5-flash"),
     system: getSystemPrompt(),
     messages: contextMessages,
-    stopWhen: [isLoopFinished()],
+    // NOTE: ai@v7 removed `maxSteps`. Without an explicit stop condition the
+    // default is isStepCount(1) — a single step — so any tool-calling turn
+    // ends on an empty final text and the UI gets nothing.
+    stopWhen: isStepCount(5),
     tools: {
       ...agentTools,
     },
+    onStepFinish,
   });
 
   return res;
