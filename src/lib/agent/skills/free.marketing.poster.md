@@ -65,7 +65,7 @@ Follow these rules for the prompt:
 ```markdown
 Here is your AI-branded marketing poster, ready to share!
 
-![Generated Poster](https://pub-your-r2-domain.r2.dev/groweasy/harness/tools/marketing-poster-123.jpg)
+![Generated Poster]([INSERT_URL_RETURNED_BY_TOOL_HERE])
 
 *Tip: This is perfectly sized for WhatsApp Status or Instagram!*
 
