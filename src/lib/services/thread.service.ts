@@ -1,5 +1,5 @@
 import { generateText } from "ai";
-import { googleProvider } from "@/lib/gemini/custom-google-provider";
+import { googleProvider } from "@/lib/gemini/google-provider";
 import { ThreadRepository } from "@/lib/repositories/thread.repository";
 import {
   ThreadResponse,
