@@ -1,5 +1,4 @@
 export interface GoogleApiKeyPoolOptions {
-  /** Cooldown after a rate-limit hit (ms). Default 60s. */
   cooldownMs?: number;
 }
 
@@ -11,7 +10,6 @@ function parseKeyList(raw: string | undefined): string[] {
     .filter(Boolean);
 }
 
-/** Collect keys from env — order preserved, unique. */
 export function loadGoogleApiKeysFromEnv(
   env: NodeJS.ProcessEnv = process.env,
 ): string[] {
@@ -28,14 +26,10 @@ export function loadGoogleApiKeysFromEnv(
 
   add(env.GEMINI_API_KEYS);
   add(env.GEMINI_API_KEY);
-  // Legacy aliases
-  add(env.GOOGLE_API_KEYS);
-  add(env.GOOGLE_API_KEY);
 
-  // Numbered keys: GEMINI_API_KEY_1 … / GOOGLE_API_KEY_1 …
   const numbered = Object.keys(env)
     .map((name) => {
-      const match = /^(?:GEMINI|GOOGLE)_API_KEY_(\d+)$/.exec(name);
+      const match = /^GEMINI_API_KEY_(\d+)$/.exec(name);
       return match ? { name, n: Number(match[1]) } : null;
     })
     .filter((x): x is { name: string; n: number } => x !== null)
@@ -46,55 +40,6 @@ export function loadGoogleApiKeysFromEnv(
   }
 
   return keys;
-}
-
-export function isGoogleModelUnavailableError(error: unknown): boolean {
-  if (error == null) return false;
-
-  const status =
-    typeof error === "object" && error !== null
-      ? ((error as { status?: unknown }).status ??
-        (error as { statusCode?: unknown }).statusCode ??
-        (error as { response?: { status?: unknown } }).response?.status)
-      : undefined;
-
-  if (status === 503 || status === 502 || status === 504 || status === 404)
-    return true;
-
-  const message =
-    error instanceof Error
-      ? `${error.name} ${error.message}`
-      : typeof error === "string"
-        ? error
-        : JSON.stringify(error);
-
-  return /503|high demand|temporarily unavailable|service unavailable|spikes in demand|overloaded|model not found/i.test(
-    message,
-  );
-}
-
-export function isGoogleRateLimitError(error: unknown): boolean {
-  if (error == null) return false;
-
-  const status =
-    typeof error === "object" && error !== null
-      ? ((error as { status?: unknown }).status ??
-        (error as { statusCode?: unknown }).statusCode ??
-        (error as { response?: { status?: unknown } }).response?.status)
-      : undefined;
-
-  if (status === 429) return true;
-
-  const message =
-    error instanceof Error
-      ? `${error.name} ${error.message}`
-      : typeof error === "string"
-        ? error
-        : JSON.stringify(error);
-
-  return /429|rate.?limit|quota|resource.?exhausted|too many requests|exceeded.+quota|generative.?language.+quota/i.test(
-    message,
-  );
 }
 
 export class GoogleApiKeyPool {
@@ -113,18 +58,13 @@ export class GoogleApiKeyPool {
     this.keys = unique;
     this.cooldownMs =
       options?.cooldownMs ??
-      Number(
-        process.env.GEMINI_API_KEY_COOLDOWN_MS ??
-          process.env.GOOGLE_API_KEY_COOLDOWN_MS ??
-          60_000,
-      );
+      Number(process.env.GEMINI_API_KEY_COOLDOWN_MS ?? 60_000);
   }
 
   get size(): number {
     return this.keys.length;
   }
 
-  /** 1-based index for logs (never log the raw key). */
   label(apiKey: string): string {
     const idx = this.keys.indexOf(apiKey);
     return idx >= 0 ? `#${idx + 1}` : "#?";
@@ -135,10 +75,6 @@ export class GoogleApiKeyPool {
     return until == null || until <= now;
   }
 
-  /**
-   * Pick the next healthy key (round-robin).
-   * @param exclude keys already tried in the current request
-   */
   acquire(exclude?: ReadonlySet<string>): string {
     const now = Date.now();
     const n = this.keys.length;
@@ -152,7 +88,6 @@ export class GoogleApiKeyPool {
       return key;
     }
 
-    // All cooling or excluded — pick the soonest-to-recover key not in exclude.
     let best: string | null = null;
     let bestUntil = Infinity;
     for (const key of this.keys) {
@@ -170,7 +105,6 @@ export class GoogleApiKeyPool {
       return best;
     }
 
-    // Last resort: rotate even if excluded (single-key setups).
     const fallback = this.keys[this.cursor % n]!;
     this.cursor = (this.cursor + 1) % n;
     return fallback;
@@ -178,42 +112,6 @@ export class GoogleApiKeyPool {
 
   markRateLimited(apiKey: string, cooldownMs = this.cooldownMs): void {
     this.cooldownUntil.set(apiKey, Date.now() + cooldownMs);
-  }
-
-  /**
-   * Returns all keys ordered for this request: starting from the next
-   * round-robin key, prioritizing healthy non-cooling keys, followed by cooling keys.
-   */
-  getRotatedKeys(): string[] {
-    const n = this.keys.length;
-    if (n === 0) return [];
-    const start = this.cursor;
-    this.cursor = (this.cursor + 1) % n;
-    const now = Date.now();
-    const available: string[] = [];
-    const cooling: string[] = [];
-
-    for (let i = 0; i < n; i++) {
-      const key = this.keys[(start + i) % n]!;
-      if (this.isAvailable(key, now)) {
-        available.push(key);
-      } else {
-        cooling.push(key);
-      }
-    }
-    return [...available, ...cooling];
-  }
-
-  /** Test helper / ops introspection. */
-  snapshot(): { total: number; available: number; cooling: number } {
-    const now = Date.now();
-    let available = 0;
-    let cooling = 0;
-    for (const key of this.keys) {
-      if (this.isAvailable(key, now)) available++;
-      else cooling++;
-    }
-    return { total: this.keys.length, available, cooling };
   }
 }
 
@@ -226,77 +124,6 @@ export function getGoogleApiKeyPool(): GoogleApiKeyPool {
   return sharedPool;
 }
 
-/** Reset pool (tests / after env hot-reload). */
 export function resetGoogleApiKeyPool(): void {
   sharedPool = null;
-}
-
-export function getGoogleApiKey(): string {
-  return getGoogleApiKeyPool().acquire();
-}
-
-/**
- * Returns all configured Google API keys in round-robin rotated order,
- * with currently cooled down keys moved to the back.
- */
-export function getRotatedGoogleApiKeys(): string[] {
-  try {
-    return getGoogleApiKeyPool().getRotatedKeys();
-  } catch {
-    return loadGoogleApiKeysFromEnv();
-  }
-}
-
-export function markGoogleApiKeyRateLimited(
-  apiKey: string,
-  cooldownMs?: number,
-): void {
-  try {
-    getGoogleApiKeyPool().markRateLimited(apiKey, cooldownMs);
-  } catch {
-    // Ignore if pool could not be initialized
-  }
-}
-
-export interface WithGoogleApiRetryOptions {
-  /** Max attempts; defaults to pool size (try each key once). */
-  maxAttempts?: number;
-}
-
-/**
- * Run an API call with automatic key rotation on rate-limit / quota errors.
- */
-export async function withGoogleApiRetry<T>(
-  fn: (apiKey: string) => Promise<T>,
-  options?: WithGoogleApiRetryOptions,
-): Promise<T> {
-  const pool = getGoogleApiKeyPool();
-  const maxAttempts = Math.max(1, options?.maxAttempts ?? pool.size);
-  const tried = new Set<string>();
-  let lastError: unknown;
-
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const apiKey = pool.acquire(tried);
-    tried.add(apiKey);
-
-    try {
-      return await fn(apiKey);
-    } catch (error) {
-      lastError = error;
-      if (!isGoogleRateLimitError(error)) {
-        throw error;
-      }
-      pool.markRateLimited(apiKey);
-      console.warn(
-        `[gemini-api-keys] rate limited key ${pool.label(apiKey)} ` +
-          `(attempt ${attempt + 1}/${maxAttempts}); rotating`,
-      );
-    }
-  }
-
-  throw lastError instanceof Error
-    ? lastError
-    : new Error(
-        `All Gemini API keys rate-limited after ${maxAttempts} attempts`,
-      );
 }
