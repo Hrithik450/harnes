@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { Buffer } from "node:buffer";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 export async function uploadImageToR2(
@@ -39,13 +40,11 @@ export async function uploadImageToR2(
     let contentType = "image/jpeg";
 
     if (base64Data.startsWith("data:")) {
-      const matches = base64Data.match(
-        /^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/,
-      );
-      if (matches && matches.length === 3) {
-        buffer = Buffer.from(matches[2], "base64");
+      const parts = base64Data.split(",");
+      if (parts.length > 1) {
+        buffer = Buffer.from(parts[1], "base64");
       } else {
-        buffer = Buffer.from(base64Data, "base64");
+        throw new Error("Invalid data URI format");
       }
     } else {
       buffer = Buffer.from(base64Data, "base64");

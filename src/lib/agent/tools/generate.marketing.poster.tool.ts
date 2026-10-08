@@ -15,13 +15,17 @@ export const generateMarketingPosterTool = tool({
   description:
     "Generate a marketing poster, WhatsApp status creative, or ad banner based on a detailed visual prompt. Returns the permanent public URL of the generated image.",
   parameters: z.object({
-    prompt: z
+    visual_prompt: z
       .string()
+      .optional()
       .describe(
         "A highly detailed visual prompt for the poster, including business details, text placement, demographic requirements, and scene description.",
       ),
+    prompt: z.string().optional().describe("Fallback for the visual prompt."),
   }),
-  execute: async (args: { prompt: string }) => {
+  execute: async (args: { visual_prompt?: string; prompt?: string }) => {
+    const finalPrompt = args.visual_prompt || args.prompt;
+    if (!finalPrompt) return "Error: You must provide a visual prompt.";
     try {
       const apiKey = imageApiKeyPool.acquire();
       if (!apiKey) {
@@ -38,8 +42,8 @@ export const generateMarketingPosterTool = tool({
       let response;
       try {
         response = await ai.interactions.create({
-          model: "gemini-3.1-flash-image-preview",
-          input: args.prompt,
+          model: "gemini-3.1-flash-image",
+          input: finalPrompt,
           response_format: {
             type: "image",
             image_size: "1K",
@@ -58,6 +62,24 @@ export const generateMarketingPosterTool = tool({
         if (error?.status === 429 || error?.message?.includes("429")) {
           imageApiKeyPool.markRateLimited(apiKey);
           return "Error: Rate limit reached. Please try again in a few moments.";
+        }
+
+        // Handle 500 Internal Server Error
+        if (
+          error?.status === 500 ||
+          error?.message?.includes("500") ||
+          error?.message?.includes("Internal Server Error")
+        ) {
+          return "Error: The image generation service is currently experiencing technical difficulties. Please try again later.";
+        }
+
+        // Handle 404 Not Found (e.g. Model not found)
+        if (
+          error?.status === 404 ||
+          error?.message?.includes("404") ||
+          error?.message?.includes("not found")
+        ) {
+          return "Error: The image generation model required for this task is currently unavailable. Please contact support.";
         }
 
         throw error;
