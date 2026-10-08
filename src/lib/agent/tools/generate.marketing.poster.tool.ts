@@ -42,7 +42,7 @@ export const generateMarketingPosterTool = tool({
       let response;
       try {
         response = await ai.interactions.create({
-          model: "gemini-3.1-flash-image",
+          model: "gemini-3.1-flash-lite-image",
           input: finalPrompt,
           response_format: {
             type: "image",
