@@ -39,8 +39,10 @@ Performance marketing moves fast, and accurate projections help teams avoid cost
 
 ## 2. Tools You Must Use
 
-When users ask for a CPL projection, you should leverage the following tools if available:
-- **`search_web`**: Use this to find the most up-to-date industry average CPL benchmarks for the specific industry and region requested (e.g., "real estate average cost per lead India 2024"). This grounds the projection in current data rather than just relying on heuristics.
+When users ask for a CPL projection, you should leverage the following tools if available to gather context before doing the math:
+- **`search_web`**: Use this to find the most up-to-date industry average CPL and CPM benchmarks for the specific industry and region requested (e.g., "real estate average cost per lead India 2024"). This grounds the projection in current data rather than just relying on heuristics.
+- **`get_search_volume`**: If the channel is Google Search, use this to check the search volume for the product/service. High volume often means higher competition and higher CPC/CPL.
+- **`search_ad_library`**: Use this to analyze competitors' running ads. Seeing how saturated the market is can help you decide whether to adjust the CPL estimate towards the pessimistic or optimistic benchmark.
 
 ---
 
