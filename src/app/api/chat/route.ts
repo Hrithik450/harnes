@@ -11,19 +11,32 @@ export async function POST(req: Request) {
       const encoder = new TextEncoder();
 
       const sendEvent = (event: string, data: unknown) => {
-        const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-        controller.enqueue(encoder.encode(payload));
+        try {
+          const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+          controller.enqueue(encoder.encode(payload));
+        } catch (err) {
+          console.error("Failed to send event:", event, err);
+        }
       };
 
+      let timeoutId: NodeJS.Timeout | null = null;
+
       try {
+        // Set a safety timeout to prevent indefinite hanging
+        const agentTimeout = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error("Agent response timed out after 55 seconds"));
+          }, 55000); // 55s, just under the 60s maxDuration
+        });
         // Walk the agent's LLM steps as they finish and turn each one into
         // thoughts for the loading UI. We never fake delays here — the client
         // owns the reveal cadence, so the stream stays purely event-driven.
         let stepIndex = 0;
-        const result = await runAgent(
-          threadId,
-          message,
-          (stepEvent: AgentStepResult) => {
+        const result = await Promise.race([
+          runAgent(
+            threadId,
+            message,
+            (stepEvent: AgentStepResult) => {
             for (const call of stepEvent.toolCalls || []) {
               const toolName = call.toolName;
               if (toolName === "fetch_skill") {
@@ -48,7 +61,12 @@ export async function POST(req: Request) {
 
             stepIndex += 1;
           },
-        );
+        ),
+        agentTimeout,
+        ]);
+
+        // Clear the timeout if the agent completed successfully
+        if (timeoutId) clearTimeout(timeoutId);
 
         console.log("Total LLM steps taken:", result.steps.length);
 
@@ -83,11 +101,23 @@ export async function POST(req: Request) {
         sendEvent("done", {});
       } catch (err) {
         console.error("Stream error:", err);
-        sendEvent("error", {
-          message: "Something went wrong while generating the response.",
-        });
+
+        // Clear timeout on error
+        if (timeoutId) clearTimeout(timeoutId);
+
+        const errorMessage = err instanceof Error && err.message.includes("timed out")
+          ? "The response took too long to generate. Please try again."
+          : "Something went wrong while generating the response.";
+
+        sendEvent("error", { message: errorMessage });
+        sendEvent("done", {});
       } finally {
-        controller.close();
+        if (timeoutId) clearTimeout(timeoutId);
+        try {
+          controller.close();
+        } catch (closeErr) {
+          console.error("Failed to close controller:", closeErr);
+        }
       }
     },
   });

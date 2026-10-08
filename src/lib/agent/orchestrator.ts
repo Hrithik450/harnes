@@ -35,16 +35,25 @@ export async function runAgent(
     content: message,
   });
 
-  const res = await generateText({
-    model: defaultAgentModel,
-    system: getSystemPrompt(),
-    messages: contextMessages,
-    stopWhen: isStepCount(5),
-    tools: {
-      ...agentTools,
-    },
-    onStepFinish,
-  });
+  try {
+    const res = await generateText({
+      model: defaultAgentModel,
+      system: getSystemPrompt(),
+      messages: contextMessages,
+      stopWhen: isStepCount(5),
+      tools: {
+        ...agentTools,
+      },
+      onStepFinish,
+      abortSignal: AbortSignal.timeout(50000), // 50 second timeout for the AI call
+    });
 
-  return res;
+    return res;
+  } catch (err) {
+    console.error("[runAgent] Error:", err);
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error("AI model request timed out");
+    }
+    throw err;
+  }
 }

@@ -9,8 +9,7 @@ import { useAgentStore } from "@/store/agent.store";
 
 export function useChatStream() {
   const { addMessage, updateMessage, replaceMessage } = useThreadMessageStore();
-  const { activeThreadId, setActiveThreadId, addThread } =
-    useThreadStore();
+  const { activeThreadId, setActiveThreadId, addThread } = useThreadStore();
   const { streamingThreads, setStreamingThread } = useAgentStore();
 
   const isStreaming = activeThreadId
@@ -130,6 +129,10 @@ export function useChatStream() {
       // Thoughts are revealed on a client-side cadence; final text is buffered
       // and only released once every thought has been revealed, so the UI shows
       // "thinking → thoughts → text" in that order, every time.
+
+      let assistantContent = "";
+      let assistantMessageAdded = false;
+
       try {
         const response = await fetch("/api/chat", {
           method: "POST",
@@ -141,13 +144,16 @@ export function useChatStream() {
           signal: controller.signal,
         });
 
+        if (!response.ok) {
+          throw new Error(
+            `Server responded with ${response.status}: ${response.statusText}`,
+          );
+        }
+
         if (!response.body) throw new Error("No response body");
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-
-        let assistantContent = "";
-        let assistantMessageAdded = false;
 
         const writer = createSmoothStreamWriter({
           // The whole response is released at once, so catch-up would dump it.
@@ -225,6 +231,10 @@ export function useChatStream() {
         });
 
         let buffer = "";
+        let lastChunkTime = Date.now();
+        const CHUNK_TIMEOUT = 30000; // 30 seconds without a chunk = stuck
+        let receivedAnyEvent = false;
+        let streamCompleted = false;
 
         while (true) {
           if (controller.signal.aborted) {
@@ -232,8 +242,16 @@ export function useChatStream() {
             break;
           }
 
+          // Check if we haven't received data in a while
+          if (Date.now() - lastChunkTime > CHUNK_TIMEOUT) {
+            console.error("Stream stuck: no data received in 30 seconds");
+            throw new Error("Connection timed out");
+          }
+
           const { done, value } = await reader.read();
           if (done) break;
+
+          lastChunkTime = Date.now();
 
           const chunkText = decoder.decode(value, { stream: true });
           if (!chunkText) continue;
@@ -269,13 +287,19 @@ export function useChatStream() {
               data = dataStr;
             }
 
+            receivedAnyEvent = true;
+
             if (eventName === "thought") {
               const t = data as {
                 id: string;
                 title: string;
                 subtitle?: string;
               };
-              reveal.enqueue({ id: t.id, title: t.title, subtitle: t.subtitle });
+              reveal.enqueue({
+                id: t.id,
+                title: t.title,
+                subtitle: t.subtitle,
+              });
             } else if (eventName === "thoughtsDone") {
               reveal.seal();
             } else if (eventName === "assistantResponse") {
@@ -287,6 +311,15 @@ export function useChatStream() {
               }
             } else if (eventName === "error") {
               console.error("Server reported stream error:", data);
+              const errorMsg =
+                typeof data === "object" && data && "message" in data
+                  ? String(data.message)
+                  : "An error occurred";
+              throw new Error(errorMsg);
+            } else if (eventName === "done") {
+              // Server signaled completion
+              streamCompleted = true;
+              break;
             }
           }
         }
@@ -296,6 +329,15 @@ export function useChatStream() {
         // Without this, `whenDrained()` could never resolve and the response
         // would never be released.
         reveal.seal();
+
+        // If we never received any events and stream didn't complete properly,
+        // it likely means the server had an error before sending anything
+        if (!receivedAnyEvent && !streamCompleted) {
+          console.warn("Stream ended without receiving any events");
+          throw new Error(
+            "No response received from server. Please try again.",
+          );
+        }
 
         // Wait for the thought panel to finish, but never hang on cosmetics.
         await Promise.race([
@@ -376,7 +418,26 @@ export function useChatStream() {
           return;
         }
         console.error("Stream error:", err);
-        console.error("Failed to generate response, please try later.");
+
+        // Show error message to user
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Failed to generate response, please try later.";
+
+        if (!assistantMessageAdded) {
+          addMessage({
+            id: assistantTempId,
+            thread_id: currentThreadId,
+            role: "assistant",
+            content: `⚠️ ${errorMessage}`,
+            created_at: new Date(),
+          });
+        } else {
+          updateMessage(currentThreadId, assistantTempId, {
+            content: `⚠️ ${errorMessage}`,
+          });
+        }
       } finally {
         setStreamingThread(currentThreadId, false);
         if (abortControllersRef.current[currentThreadId] === controller) {
