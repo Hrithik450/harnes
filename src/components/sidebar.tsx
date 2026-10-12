@@ -187,25 +187,32 @@ export function Sidebar() {
                 parseInt(thread.id.substring(0, 8), 16) % botAvatars.length;
               const avatarSrc = `/bot/${botAvatars[avatarIndex]}`;
 
+              const isStreaming = Boolean(streamingThreads[thread.id]);
+
               return (
                 <div
                   key={thread.id}
                   onClick={() => handleThreadClick(thread.id)}
-                  className={`relative overflow-hidden flex items-center space-x-3 p-2 rounded-xl cursor-pointer transition-colors ${
+                  className={`group relative overflow-hidden flex items-center space-x-3 p-2 rounded-xl cursor-pointer transition-all duration-300 ${
                     activeThreadId === thread.id
-                      ? "bg-[#2a2a2a]"
-                      : "hover:bg-[#242424]"
+                      ? "bg-[#2a2a2a] border border-zinc-700/60"
+                      : "hover:bg-[#242424] border border-transparent"
+                  } ${
+                    isStreaming
+                      ? "bg-[#262626] border-zinc-700/80 shadow-[0_0_15px_rgba(255,255,255,0.03)]"
+                      : ""
                   }`}
                 >
-                  {streamingThreads[thread.id] && (
-                    <div
-                      className="absolute inset-0 pointer-events-none animate-shimmer"
-                      style={{
-                        backgroundImage:
-                          "linear-gradient(90deg, transparent, rgba(52, 211, 153, 0.05), rgba(52, 211, 153, 0.25), rgba(52, 211, 153, 0.05), transparent)",
-                        backgroundSize: "200% 100%",
-                      }}
-                    />
+                  {isStreaming && (
+                    <div className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-20">
+                      <div
+                        className="absolute -inset-y-4 -left-1/4 w-[60%] pointer-events-none animate-metal-shine mix-blend-screen"
+                        style={{
+                          background:
+                            "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.03) 20%, rgba(255, 255, 255, 0.16) 40%, rgba(255, 255, 255, 0.42) 50%, rgba(255, 255, 255, 0.16) 60%, rgba(255, 255, 255, 0.03) 80%, transparent 100%)",
+                        }}
+                      />
+                    </div>
                   )}
                   <div className="relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
