@@ -5,7 +5,7 @@ import { uploadImageToR2 } from "@/lib/storage/r2";
 import {
   GoogleApiKeyPool,
   loadGoogleApiKeysFromEnv,
-} from "@/lib/gemini/api-key-pool";
+} from "@/lib/providers/google";
 import { retryWithBackoff } from "@/lib/utils/retry";
 
 // Dedicated instance for image generation

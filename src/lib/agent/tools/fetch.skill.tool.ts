@@ -9,7 +9,9 @@ export const fetchSkillTool = tool({
   parameters: z.object({
     skill_name: z
       .string()
-      .describe("The EXACT name of the skill to fetch (e.g., 'creative_brief_generator')."),
+      .describe(
+        "The EXACT name of the skill to fetch (e.g., 'creative_brief_generator').",
+      ),
     title: z
       .string()
       .describe(
@@ -17,14 +19,12 @@ export const fetchSkillTool = tool({
       ),
     subtitle: z
       .string()
-      .describe(
-        "A brief explanation of what you are reading in this step.",
-      ),
+      .describe("A brief explanation of what you are reading in this step."),
   }),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   execute: async (args: any) => {
     const { skill_name } = args;
-    
+
     const skill = SKILL_REGISTRY.find((s) => s.name === skill_name);
     if (!skill) {
       console.warn(`⚠️ [AI Tool Error] -> Skill '${skill_name}' not found.`);
@@ -34,9 +34,9 @@ export const fetchSkillTool = tool({
       const content = fs.readFileSync(skill.filePath, "utf-8");
       return content;
     } catch (e: unknown) {
-      console.error(`❌ [AI Tool Error] -> Failed to read '${skill_name}':`, e);
+      console.error(`AI Tool Error] -> Failed to read '${skill_name}':`, e);
       return `Error reading skill ${skill_name}: ${e instanceof Error ? e.message : String(e)}`;
     }
   },
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 } as any);

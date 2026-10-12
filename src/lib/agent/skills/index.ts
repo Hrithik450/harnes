@@ -13,7 +13,7 @@ export const SKILL_REGISTRY = [
   {
     name: "facebook_audience_builder",
     description:
-      "Build structured, ready-to-use Meta (Facebook and Instagram) ad audiences and Ideal Customer Profiles for any product, service or business, including demographics, an audience summary, behaviors, interests, education majors and work positions, plus a cold / warm / lookalike campaign structure, exclusions and budget split. Use this skill whenever the user asks about Meta or Facebook ad targeting, audience building, interest or behavior targeting, ideal customer profile (ICP), who to target, lookalikes, retargeting windows, audience overlap, exclusions, \"my ads aren't converting\", or how to structure a Meta campaign, even if they don't say \"audience builder\". Also use for follow-ups on an existing audience (refine, narrow, broaden, split by funnel stage, lead gen vs eCommerce setups).",
+      'Build structured, ready-to-use Meta (Facebook and Instagram) ad audiences and Ideal Customer Profiles for any product, service or business, including demographics, an audience summary, behaviors, interests, education majors and work positions, plus a cold / warm / lookalike campaign structure, exclusions and budget split. Use this skill whenever the user asks about Meta or Facebook ad targeting, audience building, interest or behavior targeting, ideal customer profile (ICP), who to target, lookalikes, retargeting windows, audience overlap, exclusions, "my ads aren\'t converting", or how to structure a Meta campaign, even if they don\'t say "audience builder". Also use for follow-ups on an existing audience (refine, narrow, broaden, split by funnel stage, lead gen vs eCommerce setups).',
     filePath: path.join(
       process.cwd(),
       "src/lib/agent/skills/facebook.audience.builder.md",
@@ -22,7 +22,7 @@ export const SKILL_REGISTRY = [
   {
     name: "lead_cost_calculator",
     description:
-      "Estimate cost per lead (CPL) with optimistic and pessimistic benchmarks, plus expected leads, ad budget, cost per acquisition, break-even CPL, ROI and campaign feasibility, before launching paid ads. Use this skill whenever the user asks about cost per lead, CPL, lead cost, ad budget planning, \"how much will leads cost\", \"how much budget do I need for X leads\", expected conversions, campaign ROI, break-even, whether a campaign is financially viable, or CPL benchmarks by industry, city or channel (Facebook, Instagram, Google, YouTube, LinkedIn), even if they don't say \"calculator\". Also use for follow-ups on an existing estimate (change the budget, city, channel or price, compare scenarios, explain the formula).",
+      'Estimate cost per lead (CPL) with optimistic and pessimistic benchmarks, plus expected leads, ad budget, cost per acquisition, break-even CPL, ROI and campaign feasibility, before launching paid ads. Use this skill whenever the user asks about cost per lead, CPL, lead cost, ad budget planning, "how much will leads cost", "how much budget do I need for X leads", expected conversions, campaign ROI, break-even, whether a campaign is financially viable, or CPL benchmarks by industry, city or channel (Facebook, Instagram, Google, YouTube, LinkedIn), even if they don\'t say "calculator". Also use for follow-ups on an existing estimate (change the budget, city, channel or price, compare scenarios, explain the formula).',
     filePath: path.join(
       process.cwd(),
       "src/lib/agent/skills/lead.cost.calculator.md",
@@ -59,10 +59,7 @@ export const SKILL_REGISTRY = [
     name: "ad_copywriter",
     description:
       "Write campaign-ready paid ad copy for Facebook/Instagram (Meta) and Google Search, including headlines, primary text (short and long), descriptions and CTA buttons for Meta, and Responsive Search Ad (RSA) headlines, descriptions and display paths for Google, in English, Hinglish or Hindi. Use this skill whenever the user asks for ad copy, ad text, headlines, primary text, descriptions, taglines for ads, Facebook ad copy, Instagram ad copy, Google ads copy, RSA headlines, search ad copy, A/B copy variations, prospecting or retargeting copy, or 'write ads for my business', even if they don't name a platform.",
-    filePath: path.join(
-      process.cwd(),
-      "src/lib/agent/skills/ad.copywriter.md",
-    ),
+    filePath: path.join(process.cwd(), "src/lib/agent/skills/ad.copywriter.md"),
   },
   {
     name: "keyword_suggestions",

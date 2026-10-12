@@ -34,9 +34,9 @@ export function MarkdownImage({ src, alt }: MarkdownImageProps) {
   }
 
   return (
-    <span className="relative rounded-lg overflow-hidden my-0 max-w-full block">
+    <span className="relative rounded-lg overflow-hidden my-3 block w-full sm:w-1/3 min-w-[250px]">
       {isLoading && (
-        <span className="absolute inset-0 flex items-center justify-center bg-zinc-800/50 backdrop-blur-sm min-h-[200px]">
+        <span className="absolute inset-0 flex items-center justify-center bg-zinc-800/50 backdrop-blur-sm aspect-square min-h-[200px]">
           <span className="flex flex-col items-center">
             <Loader2 className="w-8 h-8 animate-spin text-zinc-400 mb-2" />
             <span className="block text-xs text-zinc-400">Loading image...</span>
@@ -52,7 +52,7 @@ export function MarkdownImage({ src, alt }: MarkdownImageProps) {
           setIsLoading(false);
           setHasError(true);
         }}
-        className="max-w-full h-auto rounded-lg border border-zinc-700/50 !m-0"
+        className="w-full h-auto rounded-lg border border-zinc-700/50 !m-0 object-contain"
         style={{
           display: isLoading ? "none" : "block",
         }}

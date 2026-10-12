@@ -25,7 +25,6 @@ export function loadGoogleApiKeysFromEnv(
   };
 
   add(env.GENERAL_GEMINI_API_KEYS);
-  add(env.GEMINI_API_KEY);
 
   const numbered = Object.keys(env)
     .map((name) => {
@@ -52,7 +51,7 @@ export class GoogleApiKeyPool {
     const unique = [...new Set(keys.map((k) => k.trim()).filter(Boolean))];
     if (unique.length === 0) {
       throw new Error(
-        "No Gemini API keys configured. Set GENERAL_GEMINI_API_KEYS, GEMINI_API_KEY, or GEMINI_API_KEY_1…",
+        "No Gemini API keys configured. Set GENERAL_GEMINI_API_KEYS",
       );
     }
     this.keys = unique;

@@ -3,8 +3,8 @@ import { useCallback, useRef, startTransition } from "react";
 import { useThreadMessageStore } from "@/store/thread.message.store";
 import { createThreadAction } from "@/lib/actions/chat/thread.action";
 import { createMessageAction } from "@/lib/actions/chat/thread.messages.action";
-import { createSmoothStreamWriter } from "@/lib/smooth-stream-writer";
-import { createThoughtRevealScheduler } from "@/lib/thought-reveal-scheduler";
+import { createSmoothStreamWriter } from "@/lib/smooth.stream.writer";
+import { createThoughtRevealScheduler } from "@/lib/thought.reveal.scheduler";
 import { useAgentStore } from "@/store/agent.store";
 
 export function useChatStream() {

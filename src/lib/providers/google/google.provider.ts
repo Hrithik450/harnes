@@ -1,11 +1,14 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { getGoogleApiKeyPool, GoogleApiKeyPool, loadGoogleApiKeysFromEnv } from "./api-key-pool";
+import {
+  getGoogleApiKeyPool,
+  GoogleApiKeyPool,
+  loadGoogleApiKeysFromEnv,
+} from "./api.key.pool";
 
 export interface RoutingProviderOptions {
   /** The sequence of models to try in order */
   models: string[];
-  /** Optional custom pool (defaults to the global shared API key pool) */
-  pool?: GoogleApiKeyPool;
+
   /** Optional list of API keys. If provided, creates an isolated pool for this provider. */
   apiKeys?: string[];
   /** Optional label for logging (e.g. "titleGeneration") */
@@ -30,11 +33,9 @@ const serverWarn = (msg: string) => {
  */
 export function createRoutingGoogleProvider(options: RoutingProviderOptions) {
   const modelSequence = options.models;
-  const providerPool =
-    options.pool ??
-    (options.apiKeys
-      ? new GoogleApiKeyPool(options.apiKeys)
-      : getGoogleApiKeyPool());
+  const providerPool = options.apiKeys
+    ? new GoogleApiKeyPool(options.apiKeys)
+    : getGoogleApiKeyPool();
 
   return createGoogleGenerativeAI({
     apiKey: "ROTATING_KEY",
