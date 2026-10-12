@@ -45,9 +45,17 @@ export async function GET(request: NextRequest) {
     });
 
     const text = await res.text();
+    let jsonText = text;
+    if (text.includes("data:")) {
+      const line = text.split("\n").find((l) => l.startsWith("data:"));
+      if (line) {
+        jsonText = line.replace(/^data:\s*/, "");
+      }
+    }
+
     let json: unknown;
     try {
-      json = JSON.parse(text);
+      json = JSON.parse(jsonText);
     } catch {
       json = { raw: text };
     }
