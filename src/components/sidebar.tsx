@@ -249,7 +249,6 @@ export function Sidebar() {
                 <div className="h-8 w-8 rounded-full bg-zinc-800 border border-zinc-700/80 flex items-center justify-center text-xs font-medium text-white font-gothic">
                   GE
                 </div>
-                <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-white ring-2 ring-zinc-900" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center space-x-1.5">
@@ -300,7 +299,6 @@ export function Sidebar() {
                 <div className="h-8 w-8 rounded-full bg-zinc-800 border border-zinc-700/80 flex items-center justify-center text-xs font-medium text-zinc-400 font-gothic group-hover:text-zinc-200 group-hover:border-zinc-600 transition-colors">
                   GE
                 </div>
-                <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-zinc-600 ring-2 ring-zinc-900" />
               </div>
               <div className="min-w-0 flex-1">
                 <span className="font-display font-medium text-xs text-zinc-300 group-hover:text-white transition-colors block">
