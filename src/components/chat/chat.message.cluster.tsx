@@ -1,6 +1,6 @@
 import React from "react";
-import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import ReactMarkdown from "react-markdown";
 import { MarkdownImage } from "../markdown.image";
 import { ThreadMessage } from "@/lib/repositories/types/thread.message.types";
 

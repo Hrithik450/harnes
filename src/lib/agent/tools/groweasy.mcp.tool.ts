@@ -4,7 +4,7 @@ import { getGrowEasyMcpClient } from "../mcp";
 
 export const getUserOrgsTool = tool({
   description:
-    "List the organisations the authenticated user has access to with their org_id. Call this first to identify the user's active organization in GrowEasy.",
+    "List the organisations the authenticated user has access to in GrowEasy. Only call this when specifically managing GrowEasy ad campaigns.",
   parameters: z.object({
     title: z.string().optional().describe("Internal title for thought logging"),
     subtitle: z

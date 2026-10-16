@@ -26,11 +26,18 @@ export const oauthConnections = pgTable("oauth_connections", {
   id: uuid("id")
     .default(sql`uuid_generate_v7()`)
     .primaryKey(),
-  provider: text("provider").notNull().unique(),
+  org_id: text("org_id"),
+  user_id: text("user_id"),
+  provider: text("provider").notNull(),
   access_token: text("access_token").notNull(),
   refresh_token: text("refresh_token"),
-  org_id: text("org_id"),
+  token_type: text("token_type").default("Bearer"),
+  scope: text("scope"),
   expires_at: timestamp("expires_at", { withTimezone: true }),
+  status: text("status")
+    .$type<"connected" | "expired" | "disconnected">()
+    .default("disconnected"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });

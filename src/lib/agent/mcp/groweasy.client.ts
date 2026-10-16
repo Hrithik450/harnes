@@ -84,7 +84,7 @@ export class GrowEasyMcpClient {
     }
 
     throw new Error(
-      "GrowEasy is not connected. Please connect your GrowEasy account using the sidebar button before running this action."
+      "GrowEasy is not connected. Please connect your GrowEasy account using the Connectors menu before running this action."
     );
   }
 

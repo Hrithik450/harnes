@@ -27,9 +27,15 @@ export async function GET(request: NextRequest) {
     authUrl.searchParams.set("code_challenge_method", "S256");
     authUrl.searchParams.set("state", state);
 
+    const rawReturnTo = request.nextUrl.searchParams.get("return_to") || "/";
+    const returnTo =
+      rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//")
+        ? rawReturnTo
+        : "/";
+
     const response = NextResponse.redirect(authUrl.toString());
 
-    // Store PKCE verifier and state in secure HTTP-only cookies
+    // Store PKCE verifier, state, and return_to in secure HTTP-only cookies
     const cookieOptions = {
       httpOnly: true,
       secure: proto === "https",
@@ -42,6 +48,7 @@ export async function GET(request: NextRequest) {
     response.cookies.set("ge_state", state, cookieOptions);
     response.cookies.set("ge_client_id", clientId, cookieOptions);
     response.cookies.set("ge_redirect_uri", redirectUri, cookieOptions);
+    response.cookies.set("ge_return_to", returnTo, cookieOptions);
 
     return response;
   } catch (error: unknown) {

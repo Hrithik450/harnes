@@ -11,6 +11,8 @@ import {
   getCampaignDailyStatsTool,
   getCampaignBreakdownsTool,
 } from "./groweasy.mcp.tool";
+import { postToGmbTool } from "./gmb.post.tool";
+import { fetchGmbReviewsTool, replyGmbReviewTool } from "./gmb.reviews.tool";
 
 export const agentTools = {
   fetch_skill: fetchSkillTool,
@@ -24,4 +26,7 @@ export const agentTools = {
   list_campaigns: listCampaignsTool,
   get_campaign_daily_stats: getCampaignDailyStatsTool,
   get_campaign_breakdowns: getCampaignBreakdownsTool,
+  post_to_gmb: postToGmbTool,
+  fetch_gmb_reviews: fetchGmbReviewsTool,
+  reply_gmb_review: replyGmbReviewTool,
 };

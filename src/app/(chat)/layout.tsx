@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/sidebar";
+import { ConnectorsProvider } from "@/components/connectors/connectors.provider";
 
 export default function ChatLayout({
   children,
@@ -9,6 +10,7 @@ export default function ChatLayout({
     <div className="flex h-screen w-full bg-[#1e1e1e] text-zinc-100 overflow-hidden font-sans">
       <Sidebar />
       {children}
+      <ConnectorsProvider />
     </div>
   );
 }

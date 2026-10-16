@@ -18,11 +18,19 @@ export async function GET(request: NextRequest) {
     (host.includes("localhost") ? "http" : "https");
   const origin = `${proto}://${host}`;
 
+  const rawReturnTo = request.cookies.get("ge_return_to")?.value || "/";
+  const returnTo =
+    rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//")
+      ? rawReturnTo
+      : "/";
+
   if (error) {
     console.error("[GrowEasy Callback] Provider returned error:", error, errorDesc);
-    return NextResponse.redirect(
-      new URL(`/?groweasy_error=${encodeURIComponent(errorDesc || error)}`, origin)
-    );
+    const errorUrl = new URL(returnTo, origin);
+    errorUrl.searchParams.set("groweasy_error", errorDesc || error);
+    const res = NextResponse.redirect(errorUrl);
+    res.cookies.delete("ge_return_to");
+    return res;
   }
 
   const storedState = request.cookies.get("ge_state")?.value;
@@ -36,9 +44,11 @@ export async function GET(request: NextRequest) {
 
   if (!code || !state || !verifier || state !== storedState) {
     console.error("[GrowEasy Callback] Invalid state or missing parameters");
-    return NextResponse.redirect(
-      new URL("/?groweasy_error=invalid_state_or_missing_code", origin)
-    );
+    const errorUrl = new URL(returnTo, origin);
+    errorUrl.searchParams.set("groweasy_error", "invalid_state_or_missing_code");
+    const res = NextResponse.redirect(errorUrl);
+    res.cookies.delete("ge_return_to");
+    return res;
   }
 
   try {
@@ -49,7 +59,9 @@ export async function GET(request: NextRequest) {
       clientId,
     });
 
-    const response = NextResponse.redirect(new URL("/?groweasy_connected=1", origin));
+    const redirectUrl = new URL(returnTo, origin);
+    redirectUrl.searchParams.set("connector_success", "groweasy");
+    const response = NextResponse.redirect(redirectUrl);
 
     // Auto-detect organization ID via GrowEasy MCP get_user_orgs
     let detectedOrgId = "";
@@ -121,16 +133,16 @@ export async function GET(request: NextRequest) {
     response.cookies.delete("ge_state");
     response.cookies.delete("ge_client_id");
     response.cookies.delete("ge_redirect_uri");
+    response.cookies.delete("ge_return_to");
 
     return response;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "exchange_failed";
     console.error("[GrowEasy Callback] Token exchange failed:", err);
-    return NextResponse.redirect(
-      new URL(
-        `/?groweasy_error=${encodeURIComponent(message)}`,
-        origin
-      )
-    );
+    const errorUrl = new URL(returnTo, origin);
+    errorUrl.searchParams.set("groweasy_error", message);
+    const res = NextResponse.redirect(errorUrl);
+    res.cookies.delete("ge_return_to");
+    return res;
   }
 }
