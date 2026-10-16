@@ -16,7 +16,7 @@ export class OAuthConnectionService {
    */
   static async getConnection<P extends ProviderType>(
     provider: P,
-    orgId?: string
+    orgId?: string,
   ): Promise<TypedConnection<P> | null> {
     try {
       const conditions = [
@@ -42,7 +42,10 @@ export class OAuthConnectionService {
       const schema = CONNECTOR_REGISTRY[provider];
       const parsed = schema.safeParse(rawMetadata);
       if (!parsed.success) {
-        console.warn(`[OAuthConnectionService] Invalid metadata for ${provider}:`, parsed.error);
+        console.warn(
+          `[OAuthConnectionService] Invalid metadata for ${provider}:`,
+          parsed.error,
+        );
         return null;
       }
 
@@ -60,7 +63,10 @@ export class OAuthConnectionService {
         updatedAt: row.updated_at || new Date(),
       };
     } catch (err) {
-      console.error(`[OAuthConnectionService] Failed to fetch ${provider} connection:`, err);
+      console.error(
+        `[OAuthConnectionService] Failed to fetch ${provider} connection:`,
+        err,
+      );
       return null;
     }
   }
@@ -131,8 +137,14 @@ export class OAuthConnectionService {
 
       return { success: true };
     } catch (err) {
-      console.error(`[OAuthConnectionService] Failed to save ${params.provider} connection:`, err);
-      return { success: false, error: err instanceof Error ? err.message : String(err) };
+      console.error(
+        `[OAuthConnectionService] Failed to save ${params.provider} connection:`,
+        err,
+      );
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
     }
   }
 
@@ -152,8 +164,14 @@ export class OAuthConnectionService {
         .where(and(...conditions));
       return { success: true };
     } catch (err) {
-      console.error(`[OAuthConnectionService] Failed to disconnect ${provider}:`, err);
-      return { success: false, error: err instanceof Error ? err.message : String(err) };
+      console.error(
+        `[OAuthConnectionService] Failed to disconnect ${provider}:`,
+        err,
+      );
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
     }
   }
 
@@ -173,7 +191,10 @@ export class OAuthConnectionService {
         .where(and(...conditions))
         .orderBy(desc(oauthConnections.updated_at));
 
-      const map: Record<string, { connected: boolean; metadata: Record<string, unknown> }> = {};
+      const map: Record<
+        string,
+        { connected: boolean; metadata: Record<string, unknown> }
+      > = {};
       for (const row of rows) {
         if (!map[row.provider]) {
           map[row.provider] = {
@@ -184,7 +205,10 @@ export class OAuthConnectionService {
       }
       return map;
     } catch (err) {
-      console.error("[OAuthConnectionService] Failed to get all connections:", err);
+      console.error(
+        "[OAuthConnectionService] Failed to get all connections:",
+        err,
+      );
       return {};
     }
   }

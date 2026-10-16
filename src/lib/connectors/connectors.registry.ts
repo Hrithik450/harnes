@@ -80,24 +80,4 @@ export const AVAILABLE_CONNECTORS: ConnectorDefinition[] = [
     icon: "/icons/gmb.svg",
     isAvailable: true,
   },
-  {
-    id: "meta_ads",
-    name: "Meta Ads & Pages",
-    author: "Meta",
-    description:
-      "Sync Facebook & Instagram business pages, campaigns, and audience insights.",
-    icon: "/icons/meta.svg",
-    isAvailable: false,
-    comingSoon: true,
-  },
-  {
-    id: "shopify",
-    name: "Shopify Store",
-    author: "Shopify",
-    description:
-      "Connect product catalog, abandoned carts, and track store conversions.",
-    icon: "/icons/shopify.svg",
-    isAvailable: false,
-    comingSoon: true,
-  },
 ];
