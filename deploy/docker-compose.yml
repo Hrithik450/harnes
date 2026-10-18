@@ -1,0 +1,29 @@
+services:
+  web:
+    image: ghcr.io/hrithik450/harness-web:latest
+    container_name: harness-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: .env
+        required: true
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_APP_URL=https://harness.mhrithik.com
+
+  # Auto-updater: Checks GHCR every 60s for new images and automatically restarts harness-web
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: harness-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DOCKER_API_VERSION=1.45
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=60
+      - WATCHTOWER_INCLUDE_RESTARTING=true
+    command: harness-web

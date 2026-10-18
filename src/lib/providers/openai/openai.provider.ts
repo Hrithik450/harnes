@@ -24,7 +24,6 @@ export function getOpenAiProvider() {
   const apiKey = isOpenAiConfigured()
     ? (process.env.OPENAI_API_KEY as string)
     : "unconfigured-key";
-
   return createOpenAI({
     apiKey,
   });

@@ -77,7 +77,7 @@ export const AVAILABLE_CONNECTORS: ConnectorDefinition[] = [
     author: "Google",
     description:
       "Publish festive photos, updates, and monitor and reply to customer reviews.",
-    icon: "/icons/gmb.svg",
+    icon: "/icons/google.webp",
     isAvailable: true,
   },
 ];

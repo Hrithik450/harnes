@@ -1,7 +1,7 @@
-import { threads } from "../../drizzle/schema";
+import { ThreadRecord, NewThreadInput } from "../../drizzle/schema";
 
-export type Thread = typeof threads.$inferSelect;
-export type NewThread = typeof threads.$inferInsert;
+export type Thread = ThreadRecord;
+export type NewThread = NewThreadInput;
 
 export type ThreadResponse = {
   success: boolean;

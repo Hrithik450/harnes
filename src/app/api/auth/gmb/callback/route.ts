@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { exchangeGmbCode } from "@/lib/auth/gmb.oauth";
-import { GmbService, GmbLocationItem } from "@/lib/services/gmb.service";
-import { OAuthConnectionService } from "@/lib/services/oauth.connection.service";
+import { exchangeGmbCode } from "@/lib/auth/connectors/gmb.oauth";
+import { GmbService, GmbLocationItem } from "@/lib/services/gmb/gmb.service";
+import { GmbConnectorService } from "@/lib/services/connector";
+import { getSessionFromRequest } from "@/lib/auth/session";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -51,9 +52,14 @@ export async function GET(request: NextRequest) {
     let locations: GmbLocationItem[] = [];
     let isQuotaPending = false;
     try {
-      locations = await GmbService.fetchAccessibleLocations(tokens.access_token);
+      locations = await GmbService.fetchAccessibleLocations(
+        tokens.access_token,
+      );
     } catch (locErr) {
-      console.warn("[GMB Callback] Could not fetch live locations (Google API quota 0):", locErr);
+      console.warn(
+        "[GMB Callback] Could not fetch live locations (Google API quota 0):",
+        locErr,
+      );
       isQuotaPending = true;
     }
 
@@ -72,9 +78,14 @@ export async function GET(request: NextRequest) {
 
     // Default to the first location, store all accessible locations in metadata
     const activeLoc = locations[0];
-    const saveResult = await OAuthConnectionService.saveConnection({
-      provider: "google_gmb",
-      orgId: "default",
+    const session = await getSessionFromRequest(request);
+    if (!session) {
+      throw new Error(
+        "Please log in before connecting Google Business Profile.",
+      );
+    }
+    const saveResult = await GmbConnectorService.saveConnection({
+      userId: session.id,
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
       expiresIn: tokens.expires_in,
@@ -107,7 +118,7 @@ export async function GET(request: NextRequest) {
     const errorUrl = new URL(returnTo, origin);
     errorUrl.searchParams.set(
       "connector_error",
-      err instanceof Error ? err.message : "gmb_auth_failed"
+      err instanceof Error ? err.message : "gmb_auth_failed",
     );
     const res = NextResponse.redirect(errorUrl);
     res.cookies.delete("gmb_state");

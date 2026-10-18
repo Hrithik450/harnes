@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { OAuthConnectionService } from "@/lib/services/oauth.connection.service";
+import { BaseConnectorService } from "@/lib/services/connector";
+import { getSessionFromRequest } from "@/lib/auth/session";
 import {
   ProviderType,
   AVAILABLE_CONNECTORS,
 } from "@/lib/connectors/connectors.registry";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const connections = await OAuthConnectionService.getAllConnections();
+    const session = await getSessionFromRequest(request);
+
+    // If user is not authenticated, all connectors are disconnected
+    const connections = session
+      ? await BaseConnectorService.getAllUserConnections(session.id)
+      : {};
 
     const result = AVAILABLE_CONNECTORS.map((connector) => {
       const active = connections[connector.id];
@@ -18,7 +24,10 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ connectors: result });
+    return NextResponse.json({
+      authenticated: Boolean(session),
+      connectors: result,
+    });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : String(err) },
@@ -29,11 +38,20 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json(
+        { error: "Please login before managing connectors" },
+        { status: 401 },
+      );
+    }
+
     const { action, provider } = await request.json();
 
     if (action === "disconnect" && provider) {
-      await OAuthConnectionService.disconnectConnection(
+      await BaseConnectorService.disconnectConnection(
         provider as ProviderType,
+        session.id,
       );
       return NextResponse.json({ success: true });
     }

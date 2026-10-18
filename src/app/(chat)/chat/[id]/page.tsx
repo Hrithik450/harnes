@@ -1,16 +1,35 @@
 import { MainChat } from "@/components/chat/main.chat";
-import { ThreadMessageService } from "@/lib/services/thread.message.service";
+import { ThreadMessageService } from "@/lib/services";
 import { ThreadMessage } from "@/lib/repositories/types/thread.message.types";
+import { getSessionFromCookies } from "@/lib/auth/session";
+import { notFound, redirect } from "next/navigation";
 
-export default async function page(props: { params: Promise<{ id: string }> }) {
+export default async function ChatConversationPage(props: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await props.params;
+  const session = await getSessionFromCookies();
 
-  const messagesRes = await ThreadMessageService.getMessagesByThreadId(id);
-
-  let initialMessages: ThreadMessage[] = [];
-  if (messagesRes.success && messagesRes.data) {
-    initialMessages = messagesRes.data;
+  if (!session) {
+    redirect(
+      "/?auth_error=" +
+        encodeURIComponent("Please login before accessing conversations"),
+    );
   }
+
+  const messagesRes = await ThreadMessageService.getMessagesByThreadId(
+    id,
+    session.id,
+  );
+
+  if (!messagesRes.success) {
+    if (messagesRes.error === "Thread not found") {
+      notFound();
+    }
+    redirect("/");
+  }
+
+  const initialMessages: ThreadMessage[] = messagesRes.data || [];
 
   return <MainChat initialMessages={initialMessages} />;
 }

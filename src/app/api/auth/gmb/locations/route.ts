@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { OAuthConnectionService } from "@/lib/services/oauth.connection.service";
-import { GmbMetadataSchema } from "@/lib/connectors/connectors.registry";
+import { GmbConnectorService } from "@/lib/services/connector";
+import { getSessionFromRequest } from "@/lib/auth/session";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const conn = await OAuthConnectionService.getGmbConnection();
+    const session = await getSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json(
+        { error: "Please login before viewing Google Business locations" },
+        { status: 401 },
+      );
+    }
+
+    const conn = await GmbConnectorService.getConnection(session.id);
     if (!conn) {
-      return NextResponse.json({ error: "GMB not connected" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Google Business Profile not connected" },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json({
@@ -24,59 +35,56 @@ export async function GET() {
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : String(err) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json(
+        { error: "Please login before updating location" },
+        { status: 401 },
+      );
+    }
+
     const body = await request.json();
     const { locationId } = body;
 
     if (!locationId) {
-      return NextResponse.json({ error: "locationId is required" }, { status: 400 });
-    }
-
-    const conn = await OAuthConnectionService.getGmbConnection();
-    if (!conn) {
-      return NextResponse.json({ error: "GMB not connected" }, { status: 404 });
-    }
-
-    const available = conn.metadata.availableLocations || [];
-    const matched = available.find((l) => l.locationId === locationId);
-
-    if (!matched) {
       return NextResponse.json(
-        { error: "Selected location is not in available locations" },
-        { status: 400 }
+        { error: "locationId is required" },
+        { status: 400 },
       );
     }
 
-    const updatedMetadata = GmbMetadataSchema.parse({
-      ...conn.metadata,
-      accountId: matched.accountId,
-      locationId: matched.locationId,
-      locationName: matched.locationName,
-      address: matched.address,
-    });
+    const conn = await GmbConnectorService.getConnection(session.id);
+    if (!conn) {
+      return NextResponse.json(
+        { error: "Google Business Profile not connected" },
+        { status: 404 },
+      );
+    }
 
-    await OAuthConnectionService.saveConnection({
-      provider: "google_gmb",
-      orgId: conn.orgId,
-      accessToken: conn.accessToken,
-      refreshToken: conn.refreshToken ?? undefined,
-      expiresIn: conn.expiresAt
-        ? Math.floor((conn.expiresAt.getTime() - Date.now()) / 1000)
-        : undefined,
-      metadata: updatedMetadata,
-    });
+    const matched = (conn.metadata.availableLocations || []).find(
+      (l) => l.locationId === locationId,
+    );
 
-    return NextResponse.json({ success: true, activeLocation: matched });
+    await GmbConnectorService.updateActiveLocation(session.id, locationId);
+
+    return NextResponse.json({
+      success: true,
+      activeLocation: matched || {
+        locationId,
+        locationName: conn.metadata.locationName,
+      },
+    });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : String(err) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

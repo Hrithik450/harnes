@@ -4,7 +4,8 @@ import {
   NewThreadMessage,
   ThreadMessageResponse,
 } from "@/lib/repositories/types/thread.message.types";
-import { ThreadMessageService } from "@/lib/services/thread.message.service";
+import { ThreadMessageService } from "@/lib/services";
+import { getSessionFromCookies } from "@/lib/auth/session";
 
 export async function createMessageAction(
   newMessage: NewThreadMessage,
@@ -28,5 +29,16 @@ export async function createMessageAction(
 }
 
 export async function getMessagesByThreadIdAction(threadId: string) {
-  return await ThreadMessageService.getMessagesByThreadId(threadId);
+  const session = await getSessionFromCookies();
+  return await ThreadMessageService.getMessagesByThreadId(
+    threadId,
+    session?.id,
+  );
+}
+
+export async function updateMessageContentAction(
+  messageId: string,
+  content: NewThreadMessage["content"],
+) {
+  return await ThreadMessageService.updateMessageContent(messageId, content);
 }

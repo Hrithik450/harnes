@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { exchangeCodeForToken } from "@/lib/auth/groweasy.oauth";
-import { OAuthConnectionService } from "@/lib/services/oauth.connection.service";
+import { exchangeCodeForToken } from "@/lib/auth/connectors/groweasy.oauth";
+import { GrowEasyConnectorService } from "@/lib/services/connector";
+import { getSessionFromRequest } from "@/lib/auth/session";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -25,7 +26,11 @@ export async function GET(request: NextRequest) {
       : "/";
 
   if (error) {
-    console.error("[GrowEasy Callback] Provider returned error:", error, errorDesc);
+    console.error(
+      "[GrowEasy Callback] Provider returned error:",
+      error,
+      errorDesc,
+    );
     const errorUrl = new URL(returnTo, origin);
     errorUrl.searchParams.set("groweasy_error", errorDesc || error);
     const res = NextResponse.redirect(errorUrl);
@@ -45,7 +50,10 @@ export async function GET(request: NextRequest) {
   if (!code || !state || !verifier || state !== storedState) {
     console.error("[GrowEasy Callback] Invalid state or missing parameters");
     const errorUrl = new URL(returnTo, origin);
-    errorUrl.searchParams.set("groweasy_error", "invalid_state_or_missing_code");
+    errorUrl.searchParams.set(
+      "groweasy_error",
+      "invalid_state_or_missing_code",
+    );
     const res = NextResponse.redirect(errorUrl);
     res.cookies.delete("ge_return_to");
     return res;
@@ -67,7 +75,8 @@ export async function GET(request: NextRequest) {
     let detectedOrgId = "";
     try {
       const mcpEndpoint =
-        process.env.GROWEASY_MCP_URL?.replace(/\/+$/, "") || "https://groweasy.ai/api/mcp";
+        process.env.GROWEASY_MCP_URL?.replace(/\/+$/, "") ||
+        "https://groweasy.ai/api/mcp";
       const orgRes = await fetch(mcpEndpoint, {
         method: "POST",
         headers: {
@@ -101,10 +110,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Persist to database for backend services & serverless environments
-    await OAuthConnectionService.saveGrowEasyConnection({
+    const session = await getSessionFromRequest(request);
+    if (!session) {
+      throw new Error("Please log in before connecting GrowEasy.");
+    }
+    await GrowEasyConnectorService.saveConnection({
       accessToken: tokenResult.access_token,
       refreshToken: tokenResult.refresh_token,
       orgId: detectedOrgId,
+      userId: session.id,
       expiresIn: tokenResult.expires_in,
     });
 

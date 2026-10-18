@@ -5,14 +5,10 @@ import { getGrowEasyMcpClient } from "../mcp";
 export const getUserOrgsTool = tool({
   description:
     "List the organisations the authenticated user has access to in GrowEasy. Only call this when specifically managing GrowEasy ad campaigns.",
-  parameters: z.object({
-    title: z.string().optional().describe("Internal title for thought logging"),
-    subtitle: z
-      .string()
-      .optional()
-      .describe("Internal subtitle for thought logging"),
-  }),
+  inputSchema: z.object({}),
   execute: async () => {
+    const start = Date.now();
+    console.log("[Tool:MCP:get_user_orgs:Start] Requesting user organisations from GrowEasy MCP...");
     try {
       const client = getGrowEasyMcpClient();
       const res = await client.callTool("get_user_orgs", {});
@@ -21,8 +17,15 @@ export const getUserOrgsTool = tool({
           ?.map((c) => c.text)
           .filter(Boolean)
           .join("\n") || "";
+      console.log(
+        `[Tool:MCP:get_user_orgs:Success] ✅ Received organisations in ${Date.now() - start}ms (${text.length} chars)`,
+      );
       return text || JSON.stringify(res);
     } catch (err: unknown) {
+      console.error(
+        `[Tool:MCP:get_user_orgs:Error] ❌ Failed after ${Date.now() - start}ms:`,
+        err,
+      );
       return `Error retrieving GrowEasy user organisations: ${
         err instanceof Error ? err.message : String(err)
       }`;
@@ -34,7 +37,7 @@ export const getUserOrgsTool = tool({
 export const listCampaignsTool = tool({
   description:
     "List ad campaigns from GrowEasy for an organisation, with optional filters for status (LIVE, ARCHIVED, COMPLETED), date ranges, and pagination.",
-  parameters: z.object({
+  inputSchema: z.object({
     org_id: z
       .string()
       .optional()
@@ -61,14 +64,13 @@ export const listCampaignsTool = tool({
       .string()
       .optional()
       .describe("Pagination cursor from previous response"),
-    title: z.string().optional().describe("Internal title for thought logging"),
-    subtitle: z
-      .string()
-      .optional()
-      .describe("Internal subtitle for thought logging"),
   }),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   execute: async (args: any) => {
+    const start = Date.now();
+    console.log(
+      `[Tool:MCP:list_campaigns:Start] org_id=${args.org_id || "default"}, status=${args.status || "all"}, limit=${args.limit || 20}`,
+    );
     try {
       const client = getGrowEasyMcpClient();
       const orgId = args.org_id || client.getOrgId();
@@ -85,8 +87,15 @@ export const listCampaignsTool = tool({
           ?.map((c) => c.text)
           .filter(Boolean)
           .join("\n") || "";
+      console.log(
+        `[Tool:MCP:list_campaigns:Success] ✅ Received campaigns in ${Date.now() - start}ms (${text.length} chars)`,
+      );
       return text || JSON.stringify(res);
     } catch (err: unknown) {
+      console.error(
+        `[Tool:MCP:list_campaigns:Error] ❌ Failed after ${Date.now() - start}ms:`,
+        err,
+      );
       return `Error listing GrowEasy campaigns: ${
         err instanceof Error ? err.message : String(err)
       }`;
@@ -98,7 +107,7 @@ export const listCampaignsTool = tool({
 export const getCampaignDailyStatsTool = tool({
   description:
     "Get day-by-day performance metrics (spend, impressions, clicks, leads) for a specific GrowEasy campaign across a date range (capped to max 90 days).",
-  parameters: z.object({
+  inputSchema: z.object({
     org_id: z
       .string()
       .optional()
@@ -110,14 +119,13 @@ export const getCampaignDailyStatsTool = tool({
       .string()
       .describe("ISO 8601 date string start of range (max 90 days ago)"),
     created_to: z.string().describe("ISO 8601 date string end of range"),
-    title: z.string().optional().describe("Internal title for thought logging"),
-    subtitle: z
-      .string()
-      .optional()
-      .describe("Internal subtitle for thought logging"),
   }),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   execute: async (args: any) => {
+    const start = Date.now();
+    console.log(
+      `[Tool:MCP:get_campaign_daily_stats:Start] campaign=${args.campaign_id}, range=${args.created_from} to ${args.created_to}`,
+    );
     try {
       const client = getGrowEasyMcpClient();
       const orgId = args.org_id || client.getOrgId();
@@ -132,8 +140,15 @@ export const getCampaignDailyStatsTool = tool({
           ?.map((c) => c.text)
           .filter(Boolean)
           .join("\n") || "";
+      console.log(
+        `[Tool:MCP:get_campaign_daily_stats:Success] ✅ Received stats in ${Date.now() - start}ms (${text.length} chars)`,
+      );
       return text || JSON.stringify(res);
     } catch (err: unknown) {
+      console.error(
+        `[Tool:MCP:get_campaign_daily_stats:Error] ❌ Failed after ${Date.now() - start}ms:`,
+        err,
+      );
       return `Error fetching campaign daily stats: ${
         err instanceof Error ? err.message : String(err)
       }`;
@@ -145,7 +160,7 @@ export const getCampaignDailyStatsTool = tool({
 export const getCampaignBreakdownsTool = tool({
   description:
     "Get campaign performance broken down by a specific segment: location, demographics, ad-copies, keywords, hour-range, media-assets, or platform.",
-  parameters: z.object({
+  inputSchema: z.object({
     org_id: z
       .string()
       .optional()
@@ -164,14 +179,13 @@ export const getCampaignBreakdownsTool = tool({
         "platform",
       ])
       .describe("Segment breakdown type"),
-    title: z.string().optional().describe("Internal title for thought logging"),
-    subtitle: z
-      .string()
-      .optional()
-      .describe("Internal subtitle for thought logging"),
   }),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   execute: async (args: any) => {
+    const start = Date.now();
+    console.log(
+      `[Tool:MCP:get_campaign_breakdowns:Start] campaign=${args.campaign_id}, type=${args.type}`,
+    );
     try {
       const client = getGrowEasyMcpClient();
       const orgId = args.org_id || client.getOrgId();
@@ -185,8 +199,15 @@ export const getCampaignBreakdownsTool = tool({
           ?.map((c) => c.text)
           .filter(Boolean)
           .join("\n") || "";
+      console.log(
+        `[Tool:MCP:get_campaign_breakdowns:Success] ✅ Received breakdown in ${Date.now() - start}ms (${text.length} chars)`,
+      );
       return text || JSON.stringify(res);
     } catch (err: unknown) {
+      console.error(
+        `[Tool:MCP:get_campaign_breakdowns:Error] ❌ Failed after ${Date.now() - start}ms:`,
+        err,
+      );
       return `Error fetching campaign breakdowns: ${
         err instanceof Error ? err.message : String(err)
       }`;

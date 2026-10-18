@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { getGmbAuthUrl } from "@/lib/auth/gmb.oauth";
+import { getGmbAuthUrl } from "@/lib/auth/connectors/gmb.oauth";
+import { getSessionFromRequest } from "@/lib/auth/session";
 
 export async function GET(request: NextRequest) {
   const host =
@@ -11,6 +12,16 @@ export async function GET(request: NextRequest) {
     request.headers.get("x-forwarded-proto") ||
     (host.includes("localhost") ? "http" : "https");
   const origin = `${proto}://${host}`;
+
+  const session = await getSessionFromRequest(request);
+  if (!session) {
+    const errorUrl = new URL("/", origin);
+    errorUrl.searchParams.set(
+      "auth_error",
+      "Please login before connecting connectors",
+    );
+    return NextResponse.redirect(errorUrl);
+  }
 
   const state = crypto.randomBytes(24).toString("hex");
   const authUrl = getGmbAuthUrl(origin, state);

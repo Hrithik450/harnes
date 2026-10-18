@@ -31,7 +31,7 @@ export const SKILL_REGISTRY = [
   {
     name: "competitor_research",
     description:
-      "Produce an actionable competitor research report for any product, service or brand using web search. Use this skill whenever the user asks about competitors, competitive analysis, market analysis, 'who are my competitors', 'what are competitors doing', competitor ads or creatives, competitor messaging or USPs, positioning gaps, white space in a niche, SEO or keyword competitor analysis, or how to differentiate. Also use for follow-ups (go deeper on one competitor, compare two, find gaps, turn findings into messaging, ads or an SEO plan). ALWAYS use the `search_web` tool heavily to find real-time data before generating the report.",
+      "Produce an actionable competitor research report for any product, service, brand, company, or commercial project (including real estate developments, local businesses, clinics, B2B, DTC, and offline venues) using web search. Use this skill whenever the user asks about competitors, competitive analysis, market analysis, 'who are my competitors', 'what are competitors doing', competitor ads or creatives, competitor messaging or USPs, positioning gaps, white space in a niche, SEO or keyword competitor analysis, or how to differentiate. Also use for follow-ups (go deeper on one competitor, compare two, find gaps, turn findings into messaging, ads or an SEO plan). ALWAYS use the `search_web` tool heavily to find real-time data before generating the report.",
     filePath: path.join(
       process.cwd(),
       "src/lib/agent/skills/competitor.research.md",
@@ -44,15 +44,6 @@ export const SKILL_REGISTRY = [
     filePath: path.join(
       process.cwd(),
       "src/lib/agent/skills/marketing.strategist.md",
-    ),
-  },
-  {
-    name: "video_script_generator",
-    description:
-      "Write ready-to-record video ad scripts (Hook, Body, CTA) for any product, service or business, in conversation-style, Q&A (creator + viewer), storytelling, testimonial-style, comparison and how-it-works formats, in English, Hinglish or Hindi, at a chosen duration (15, 30, 45 or 60 seconds). Use this skill whenever the user asks for a video script, ad script, reel or short-form script, UGC script, voiceover, founder or influencer script, product demo or explainer script, 'what should I say in my ad video', hooks for video ads, or video ad ideas, even if they never say 'script'.",
-    filePath: path.join(
-      process.cwd(),
-      "src/lib/agent/skills/video.script.generator.md",
     ),
   },
   {
@@ -70,4 +61,23 @@ export const SKILL_REGISTRY = [
       "src/lib/agent/skills/keyword.suggestions.md",
     ),
   },
+  {
+    name: "brief_to_fast_cut_video",
+    description:
+      "Transform a campaign brief, product, or idea into a complete, broadcast-ready 9:16 vertical video ad package or script (timed VO script, shot list, visual style bible, anchor stills, motion prompts, voice & music specs, persistent bottom offer block, word-synced captions, deterministic assembly plan, and automated QA verification). Supports both Fast-Cut Voiceover Lifestyle Ads and Talking Presenter / Spokesperson Ads. Use this skill whenever the user asks to create a video ad, ad script, reel or video campaign, produce an AI video ad pipeline, write video hooks or voiceover scripts, or generate an end-to-end video ad production package.",
+    filePath: path.join(
+      process.cwd(),
+      "src/lib/agent/skills/brief.to.fast.cut.video.md",
+    ),
+  },
+  {
+    name: "marketing_poster",
+    description:
+      "Generate highly detailed marketing posters, ad creatives, flyers, and banners in 1:1, 9:16, 16:9, or 4:5 aspect ratios based on user marketing requirements.",
+    filePath: path.join(
+      process.cwd(),
+      "src/lib/agent/skills/marketing.poster.md",
+    ),
+  },
 ];
+

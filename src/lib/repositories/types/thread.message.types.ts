@@ -1,4 +1,4 @@
-import { threadMessages } from "../../drizzle/schema";
+import { ThreadMessageRecord, NewThreadMessageInput } from "../../drizzle/schema";
 
 export type ThreadMessageResponse = {
   success: boolean;
@@ -12,5 +12,5 @@ export type ThreadMessagesResponse = {
   error?: string;
 };
 
-export type ThreadMessage = typeof threadMessages.$inferSelect;
-export type NewThreadMessage = typeof threadMessages.$inferInsert;
+export type ThreadMessage = ThreadMessageRecord;
+export type NewThreadMessage = NewThreadMessageInput;

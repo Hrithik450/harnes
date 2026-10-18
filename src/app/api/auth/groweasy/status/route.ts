@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { OAuthConnectionService } from "@/lib/services/oauth.connection.service";
+import { GrowEasyConnectorService } from "@/lib/services/connector";
+import { getSessionFromRequest } from "@/lib/auth/session";
 
 export async function GET(request: NextRequest) {
+  const session = await getSessionFromRequest(request);
   const cookieToken = request.cookies.get("ge_access_token")?.value;
-  const dbConnection = await OAuthConnectionService.getGrowEasyConnection();
+  const dbConnection = session
+    ? await GrowEasyConnectorService.getConnection(session.id)
+    : null;
 
   const token = cookieToken || dbConnection?.accessToken;
   const orgId = dbConnection?.orgId || null;
@@ -22,9 +26,12 @@ export async function GET(request: NextRequest) {
   });
 }
 
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const session = await getSessionFromRequest(request);
   // Disconnect / logout action: remove from database and delete cookies
-  await OAuthConnectionService.deleteGrowEasyConnection();
+  if (session) {
+    await GrowEasyConnectorService.disconnect(session.id);
+  }
 
   const response = NextResponse.json({ success: true, connected: false });
   response.cookies.delete("ge_access_token");

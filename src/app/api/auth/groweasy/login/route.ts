@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generatePkce, getOrCreateClientId } from "@/lib/auth/groweasy.oauth";
+import {
+  generatePkce,
+  getOrCreateClientId,
+} from "@/lib/auth/connectors/groweasy.oauth";
+import { getSessionFromRequest } from "@/lib/auth/session";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,12 +16,23 @@ export async function GET(request: NextRequest) {
       (host.includes("localhost") ? "http" : "https");
     const origin = `${proto}://${host}`;
 
+    const session = await getSessionFromRequest(request);
+    if (!session) {
+      const errorUrl = new URL("/", origin);
+      errorUrl.searchParams.set(
+        "auth_error",
+        "Please login before connecting connectors",
+      );
+      return NextResponse.redirect(errorUrl);
+    }
+
     const redirectUri = `${origin}/api/auth/groweasy/callback`;
     const clientId = await getOrCreateClientId(redirectUri);
     const { verifier, challenge, state } = generatePkce();
 
     const mcpBase =
-      process.env.GROWEASY_MCP_URL?.replace(/\/+$/, "") || "https://groweasy.ai/api/mcp";
+      process.env.GROWEASY_MCP_URL?.replace(/\/+$/, "") ||
+      "https://groweasy.ai/api/mcp";
 
     const authUrl = new URL(`${mcpBase}/oauth/authorize`);
     authUrl.searchParams.set("response_type", "code");
@@ -56,7 +71,7 @@ export async function GET(request: NextRequest) {
     console.error("[GrowEasy Login] Error generating auth URL:", error);
     return NextResponse.json(
       { error: "Failed to initiate GrowEasy authentication", details: message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { ImageOff, Loader2 } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { ImageOff, Loader2, Maximize2 } from "lucide-react";
+import { ImageLightboxModal } from "./chat/image.lightbox.modal";
 
 interface MarkdownImageProps {
   src: string;
@@ -11,6 +12,29 @@ interface MarkdownImageProps {
 export function MarkdownImage({ src, alt }: MarkdownImageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  const handleRef = useCallback((node: HTMLImageElement | null) => {
+    imgRef.current = node;
+    if (node) {
+      if (node.complete && node.naturalWidth > 0) {
+        setIsLoading(false);
+      } else if (typeof node.decode === "function") {
+        node
+          .decode()
+          .then(() => setIsLoading(false))
+          .catch(() => {});
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const el = imgRef.current;
+    if (el?.complete && el.naturalWidth > 0) {
+      setIsLoading(false);
+    }
+  }, [src]);
 
   const handleRetry = () => {
     setHasError(false);
@@ -34,29 +58,46 @@ export function MarkdownImage({ src, alt }: MarkdownImageProps) {
   }
 
   return (
-    <span className="relative rounded-lg overflow-hidden my-3 block w-full sm:w-1/3 min-w-[250px]">
-      {isLoading && (
-        <span className="absolute inset-0 flex items-center justify-center bg-zinc-800/50 backdrop-blur-sm aspect-square min-h-[200px]">
-          <span className="flex flex-col items-center">
-            <Loader2 className="w-8 h-8 animate-spin text-zinc-400 mb-2" />
-            <span className="block text-xs text-zinc-400">Loading image...</span>
+    <>
+      <span
+        onClick={() => setLightboxOpen(true)}
+        className={`group relative rounded-xl overflow-hidden my-3 block w-fit max-w-full border border-zinc-800/80 bg-zinc-900/60 hover:border-zinc-700 transition-all cursor-pointer shadow-md select-none ${
+          isLoading ? "min-w-[240px] min-h-[320px]" : ""
+        }`}
+      >
+        {isLoading && (
+          <span className="absolute inset-0 flex items-center justify-center bg-zinc-900/60 backdrop-blur-sm z-10 pointer-events-none transition-opacity">
+            <span className="flex flex-col items-center">
+              <Loader2 className="w-7 h-7 animate-spin text-zinc-400 mb-2" />
+              <span className="block text-xs text-zinc-400">Loading image...</span>
+            </span>
           </span>
+        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          ref={handleRef}
+          src={src}
+          alt={alt || "Generated image"}
+          loading="eager"
+          decoding="async"
+          onLoad={() => setIsLoading(false)}
+          onError={() => {
+            setIsLoading(false);
+            setHasError(true);
+          }}
+          className="w-auto h-auto max-h-[480px] max-w-full rounded-xl !m-0 block object-contain transition-transform duration-300 group-hover:scale-[1.01]"
+        />
+
+        <span className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/60 text-white opacity-0 group-hover:opacity-100 backdrop-blur-sm transition-opacity z-20 pointer-events-none">
+          <Maximize2 size={13} />
         </span>
-      )}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt || "Generated image"}
-        onLoad={() => setIsLoading(false)}
-        onError={() => {
-          setIsLoading(false);
-          setHasError(true);
-        }}
-        className="w-full h-auto rounded-lg border border-zinc-700/50 !m-0 object-contain"
-        style={{
-          display: isLoading ? "none" : "block",
-        }}
+      </span>
+
+      <ImageLightboxModal
+        isOpen={lightboxOpen}
+        images={[{ src, alt }]}
+        onClose={() => setLightboxOpen(false)}
       />
-    </span>
+    </>
   );
 }

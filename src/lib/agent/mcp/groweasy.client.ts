@@ -1,4 +1,5 @@
-import { OAuthConnectionService } from "@/lib/services/oauth.connection.service";
+import { GrowEasyConnectorService } from "@/lib/services/connector";
+import { getSessionFromCookies } from "@/lib/auth/session";
 
 export interface JsonRpcRequest {
   jsonrpc: "2.0";
@@ -73,8 +74,13 @@ export class GrowEasyMcpClient {
       return;
     }
 
-    // Read active OAuth token from database
-    const conn = await OAuthConnectionService.getGrowEasyConnection();
+    // Read active OAuth token from database for the authenticated user
+    const session = await getSessionFromCookies().catch(() => null);
+    if (!session) {
+      throw new Error("Please login before using GrowEasy tools.");
+    }
+
+    const conn = await GrowEasyConnectorService.getConnection(session.id);
     if (conn?.accessToken) {
       this.apiKey = conn.accessToken;
       if (conn.orgId) {
@@ -84,7 +90,7 @@ export class GrowEasyMcpClient {
     }
 
     throw new Error(
-      "GrowEasy is not connected. Please connect your GrowEasy account using the Connectors menu before running this action."
+      "GrowEasy is not connected. Please connect your GrowEasy account using the Connectors menu before running this action.",
     );
   }
 
@@ -134,6 +140,7 @@ export class GrowEasyMcpClient {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(20000),
     });
 
     const rawText = await res.text();

@@ -4,7 +4,7 @@ import { z } from "zod";
 export const validateMetaInterestsTool = tool({
   description:
     "Validate whether a proposed audience interest is currently targetable on Meta (Facebook/Instagram) and retrieve its exact audience size.",
-  parameters: z.object({
+  inputSchema: z.object({
     interest_query: z.string().describe("The interest keyword to search for on Meta."),
   }),
   execute: async (args: { interest_query: string; title?: string; subtitle?: string }) => {

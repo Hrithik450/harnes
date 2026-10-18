@@ -4,7 +4,7 @@ import { z } from "zod";
 export const searchWebTool = tool({
   description:
     "Search the web for current information, competitor data, or news using the Tavily API.",
-  parameters: z.object({
+  inputSchema: z.object({
     query: z.string().describe("The search query to execute."),
   }),
   execute: async (args: { query: string; title?: string; subtitle?: string }) => {
@@ -26,6 +26,7 @@ export const searchWebTool = tool({
           include_answer: true,
           max_results: 5,
         }),
+        signal: AbortSignal.timeout(15000),
       });
 
       if (!response.ok) {

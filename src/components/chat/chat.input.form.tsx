@@ -10,16 +10,10 @@ import {
   SlidersHorizontal,
   Globe,
   Check,
+  Square,
 } from "lucide-react";
-import { DropdownItem } from "../dropdown.item";
 import { useConnectorStore } from "@/store/connector.store";
 import { toast } from "sonner";
-
-export interface ActiveUiAction {
-  type: string;
-  listId: string;
-  message: string;
-}
 
 interface ChatInputFormProps {
   inputValue: string;
@@ -27,7 +21,8 @@ interface ChatInputFormProps {
   onSubmit: (e: React.FormEvent | React.KeyboardEvent) => void;
   onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   isStreaming: boolean;
-  activeUiAction?: ActiveUiAction | null;
+  onStop?: () => void;
+  isBlocked?: boolean;
   placeholder?: string;
   className?: string;
 }
@@ -38,7 +33,8 @@ export function ChatInputForm({
   onSubmit,
   onKeyDown,
   isStreaming,
-  activeUiAction,
+  onStop,
+  isBlocked = false,
   placeholder = "Message Chief",
   className = "w-full max-w-3xl mx-auto relative",
 }: ChatInputFormProps) {
@@ -62,17 +58,17 @@ export function ChatInputForm({
   }, [isMenuOpen]);
 
   return (
-    <form onSubmit={onSubmit} className={className}>
-      {activeUiAction?.type === "dropdown" && (
-        <DropdownItem
-          listId={activeUiAction.listId}
-          message={activeUiAction.message}
-          onSelect={(val: string) => {
-            setInputValue(val);
-          }}
-        />
-      )}
-
+    <form
+      onSubmit={(e) => {
+        if (isBlocked) {
+          e.preventDefault();
+          toast.info("Please complete the questions above to continue.");
+          return;
+        }
+        onSubmit(e);
+      }}
+      className={className}
+    >
       <div className="flex items-end bg-[#2a2a2a] rounded-2xl pl-2 pr-2 py-2 transition-colors relative min-h-[52px]">
         {/* Action Menu */}
         <div ref={menuRef} className="relative">
@@ -97,7 +93,7 @@ export function ChatInputForm({
           </button>
 
           {isMenuOpen && (
-            <div className="absolute bottom-12 left-0 z-40 w-56 bg-[#2a2a2a] border border-zinc-700/80 rounded-2xl shadow-2xl p-1.5 animate-in fade-in slide-in-from-bottom-2 duration-150">
+            <div className="absolute bottom-12 left-0 z-40 w-56 max-w-[calc(100vw-2.5rem)] bg-[#2a2a2a] border border-zinc-700/80 rounded-2xl shadow-2xl p-1.5 animate-in fade-in slide-in-from-bottom-2 duration-150">
               <button
                 type="button"
                 onClick={() => {
@@ -161,9 +157,27 @@ export function ChatInputForm({
           maxRows={8}
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder={placeholder}
-          className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none font-gothic text-zinc-200 placeholder:text-zinc-500 shadow-none px-4 py-1.5 text-[15px] leading-6 min-h-[36px] resize-none overflow-y-auto"
+          onKeyDown={(e) => {
+            if (isStreaming && e.key === "Escape") {
+              e.preventDefault();
+              onStop?.();
+              return;
+            }
+            if (!e.nativeEvent.isComposing && (isBlocked || isStreaming) && e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              if (isBlocked) {
+                toast.info("Please complete the questions above to continue.");
+              }
+              return;
+            }
+            onKeyDown(e);
+          }}
+          placeholder={
+            isBlocked
+              ? "Please complete the questions above to continue..."
+              : placeholder
+          }
+          className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none font-gothic text-zinc-200 placeholder:text-zinc-500 shadow-none px-2.5 sm:px-4 py-1.5 text-[16px] sm:text-[15px] leading-6 min-h-[36px] resize-none overflow-y-auto"
           style={{
             boxShadow: "none",
             border: "none",
@@ -174,11 +188,38 @@ export function ChatInputForm({
         />
 
         <button
-          type={inputValue.trim() ? "submit" : "button"}
-          disabled={isStreaming}
-          className="h-[36px] w-[36px] flex items-center justify-center bg-[#f4f4f5] text-zinc-900 hover:bg-white rounded-xl transition-colors ml-1 flex-shrink-0 disabled:opacity-50"
+          type={!isStreaming && inputValue.trim() && !isBlocked ? "submit" : "button"}
+          disabled={!isStreaming && isBlocked}
+          onClick={(e) => {
+            if (isStreaming) {
+              e.preventDefault();
+              onStop?.();
+              return;
+            }
+            if (isBlocked) {
+              e.preventDefault();
+              toast.info("Please complete the questions above to continue.");
+            }
+          }}
+          className={`h-[36px] w-[36px] flex items-center justify-center rounded-xl transition-all ml-1 flex-shrink-0 ${
+            isStreaming
+              ? "bg-[#f4f4f5] text-zinc-900 hover:bg-white cursor-pointer shadow-sm active:scale-95"
+              : isBlocked
+              ? "bg-[#383838] text-zinc-500 cursor-not-allowed opacity-40"
+              : "bg-[#f4f4f5] text-zinc-900 hover:bg-white disabled:opacity-50"
+          }`}
+          title={
+            isStreaming
+              ? "Stop generating"
+              : isBlocked
+              ? "Please complete the questions above to continue"
+              : undefined
+          }
+          aria-label={isStreaming ? "Stop generating" : "Send message"}
         >
-          {inputValue.trim() ? (
+          {isStreaming ? (
+            <Square className="h-3.5 w-3.5 fill-current" />
+          ) : inputValue.trim() ? (
             <svg
               width="16"
               height="16"
